@@ -47,7 +47,6 @@ function HomePage() {
         showProgressView,
         itemsToMove,
         itemsToDelete,
-        setTasks,
         setShowProgressView,
         addItemsToUpload,
         addItemsToDownload,
@@ -55,6 +54,8 @@ function HomePage() {
         setItemsToDelete,
         setItemToCopy,
         setItemForGfptar,
+        removeDoneTasks,
+        removeTasks,
     } = useProgressTasks(refreshItems, addNotification);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
@@ -293,7 +294,8 @@ function HomePage() {
                     setShowProgressView(false);
                 }}
                 tasks={tasks}
-                setTasks={setTasks}
+                removeDoneTasks={removeDoneTasks}
+                removeTasks={removeTasks}
             />
             {!showProgressView && tasks.length > 0 && (
                 <button

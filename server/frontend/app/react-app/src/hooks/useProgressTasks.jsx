@@ -18,9 +18,18 @@ function useProgressTasks(refreshItems, addNotification) {
     const isUploadingRef = useRef(false);
     const isDownloadingRef = useRef(false);
 
+    const removeDoneTasks = () => {
+        setTasks((prev) => prev.filter((t) => !t.done || t.status === "error"));
+    };
+
+    const removeTasks = (taskId) => {
+        setTasks((prev) => prev.filter((t) => t.taskId !== taskId));
+    };
+
     const updateTask = (task, updates) => {
         return {
             ...task,
+            name: updates.name ?? task.name,
             status: updates.status ?? task.status,
             value: updates.value ?? task.value,
             message: updates.message ?? task.message,
@@ -30,132 +39,148 @@ function useProgressTasks(refreshItems, addNotification) {
     };
 
     const addItemsToUpload = (newItems) => {
-        setTasks((prev) => prev.filter((t) => !t.done || t.status === "error"));
-        const tasks = newItems.map((file) => {
-            const fullpath = file.destPath;
-            const taskId = fullpath + Date.now();
-            const displaypath = fullpath.replace(file.uploadDir + "/", "");
-            const displayname =
-                displaypath.length > 20 ? displaypath.slice(0, 20) + "..." : displaypath;
+        removeDoneTasks();
+        const taskId = `upload-${newItems[0].uploadDir}-${newItems.length}-${Date.now()}`;
+        const fullPath = newItems[0].destPath;
+        const displayPath = newItems.length === 1 ? fullPath : `uploading ${newItems.length} files`;
+        const newTask = {
+            taskId,
+            name: displayPath,
+            value: 0,
+            done: false,
+            type: "upload",
+            status: "upload",
+            message: "waiting to upload...",
+            onCancel: null,
+        };
+        setTasks((prev) => [...prev, newTask]);
 
-            const newTask = {
-                taskId,
-                name: displayname,
-                value: 0,
-                done: false,
-                type: "upload",
-                status: "upload",
-                message: "waiting to upload...",
-                onCancel: () => {},
-            };
-            uploadQueueRef.current.push({ file, fullpath, taskId });
-            return newTask;
+        uploadQueueRef.current.push(async () => {
+            await handleUpload(taskId, newItems);
         });
-        setTasks((prev) => [...prev, ...tasks]);
+
         setShowProgressView(true);
 
         setUploading(true);
         console.debug("addFilesToUpload", newItems);
     };
 
-    const runWithLimit = async (tasks, limit = 10) => {
-        const results = [];
-        const queue = [];
+    const handleUpload = async (taskId, newItems) => {
+        const destDirSet = {};
+        const uploadDirSet = new Set(["/"]);
 
-        for (const task of tasks) {
-            const p = task().then((result) => {
-                queue.splice(queue.indexOf(p), 1);
-                return result;
-            });
-            queue.push(p);
-            results.push(p);
+        let exec_count = 0;
+        let cancelled = false;
 
-            if (queue.length >= limit) {
-                await Promise.race(queue);
+        const progressCallback = ({ status, value, message, done, onCancel }) => {
+            if (onCancel && cancelled) {
+                onCancel();
+            }
+            const cancelFunc = onCancel
+                ? () => {
+                      cancelled = true;
+                      onCancel();
+                  }
+                : null;
+            const progressMessage = message
+                ? `(${exec_count}/${newItems.length})\n ${message}`
+                : null;
+            setTasks((prev) =>
+                prev.map((task) =>
+                    task.taskId === taskId
+                        ? updateTask(task, {
+                              status,
+                              value,
+                              message: progressMessage,
+                              done,
+                              onCancel: cancelFunc,
+                          })
+                        : task
+                )
+            );
+        };
+        progressCallback({ onCancel: () => {} });
+
+        for (const file of newItems) {
+            if (cancelled) {
+                break;
+            }
+            if (file.uploadDir && !(file.uploadDir in destDirSet)) {
+                const error = await checkPermission(file.uploadDir);
+                destDirSet[file.uploadDir] = error;
+                if (error) {
+                    setError("Upload", error);
+                    break;
+                }
+            }
+            exec_count++;
+            if (!file) continue;
+
+            const fullPath = file.destPath;
+
+            try {
+                await upload(file, fullPath, uploadDirSet, progressCallback, setError);
+            } catch (e) {
+                console.error("uploadFile failed:", e);
             }
         }
 
-        return Promise.all(results);
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.taskId === taskId
+                    ? updateTask(task, {
+                          status: cancelled ? "cancelled" : "completed",
+                          message: cancelled
+                              ? `(${exec_count}/${newItems.length}) Upload cancelled`
+                              : task.message,
+                          done: true,
+                      })
+                    : task
+            )
+        );
+        refreshItems();
     };
 
-    const handleUpload = async () => {
-        setUploading(false);
-        if (isUploadingRef.current) {
-            console.debug("handleUpload is already running");
-            return;
-        }
+    const runUploadWithLimit = async () => {
+        if (isUploadingRef.current) return;
         isUploadingRef.current = true;
 
-        const uploadTasks = [];
-        const destDirSet = {};
-        const uploadDirSet = new Set();
-        uploadDirSet.add("/");
-        while (uploadQueueRef.current.length) {
-            const uploadItem = uploadQueueRef.current.shift();
-
-            if (!uploadItem.file) continue;
-
-            let error = null;
-            if (!(uploadItem.file.uploadDir in destDirSet)) {
-                error = await checkPermission(uploadItem.file.uploadDir);
-                destDirSet[uploadItem.file.uploadDir] = error;
-            } else {
-                error = destDirSet[uploadItem.file.uploadDir];
+        const running = new Set();
+        const startNext = () => {
+            while (running.size < PARALLEL_LIMIT && uploadQueueRef.current.length > 0) {
+                const fn = uploadQueueRef.current.shift();
+                const p = Promise.resolve()
+                    .then(fn)
+                    .catch((e) => console.error("upload batch failed:", e))
+                    .finally(() => running.delete(p));
+                running.add(p);
             }
-            uploadDirSet.add(uploadItem.file.uploadDir);
+        };
 
-            if (error) {
-                setTasks((prev) =>
-                    prev.map((task) =>
-                        task.taskId === uploadItem.taskId
-                            ? {
-                                  ...task,
-                                  status: "error",
-                                  message: error,
-                                  done: true,
-                              }
-                            : task
-                    )
-                );
+        startNext();
+
+        while (running.size > 0 || uploadQueueRef.current.length > 0) {
+            if (running.size === 0) {
+                startNext();
                 continue;
             }
-
-            uploadTasks.push(async () => {
-                return upload(
-                    uploadItem.file,
-                    uploadItem.fullpath,
-                    uploadDirSet,
-                    ({ status, value, message, done, onCancel }) => {
-                        setTasks((prev) =>
-                            prev.map((task) =>
-                                task.taskId === uploadItem.taskId
-                                    ? updateTask(task, { status, value, message, done, onCancel })
-                                    : task
-                            )
-                        );
-                    }
-                ).catch((err) => {
-                    console.error("uploadFile failed:", err);
-                });
-            });
+            await Promise.race(running);
+            startNext();
         }
-        isUploadingRef.current = false;
 
-        await runWithLimit(uploadTasks, PARALLEL_LIMIT);
-        console.debug("upload done!", uploadDirSet);
-        refreshItems();
+        isUploadingRef.current = false;
     };
 
     useEffect(() => {
         console.debug("Uploading", uploading);
         if (uploading) {
-            handleUpload();
+            setUploading(false);
+            runUploadWithLimit();
         }
     }, [uploading]);
 
     const addItemsToDownload = (items) => {
         console.debug("addItemsToDownload: items:", items);
-        setTasks((prev) => prev.filter((t) => !t.done || t.status === "error"));
         downloadQueueRef.current.push(items);
         setDownloading(true);
     };
@@ -166,7 +191,6 @@ function useProgressTasks(refreshItems, addNotification) {
     };
 
     const handleDownload = async () => {
-        setDownloading(false);
         if (isDownloadingRef.current) {
             console.debug("handleDownload is already running");
             return;
@@ -184,29 +208,30 @@ function useProgressTasks(refreshItems, addNotification) {
 
     useEffect(() => {
         if (downloading) {
+            setDownloading(false);
             handleDownload();
         }
     }, [downloading]);
 
     const setItemToCopy = async (item, existingNames) => {
+        removeDoneTasks();
         const filename = suggestNewName(item.name, existingNames);
-        const destpath = getParentPath(item.path).replace(/\/$/, "") + "/" + filename;
-        const taskId = filename + Date.now();
-        const displayname = filename.length > 20 ? filename.slice(0, 20) + "..." : filename;
+        const destPath = getParentPath(item.path).replace(/\/$/, "") + "/" + filename;
+        const taskId = "copy-" + filename + Date.now();
 
         const newTask = {
             taskId,
-            name: displayname,
+            name: filename,
             value: 0,
             type: "copy",
             status: "copy",
             message: "",
-            onCancel: () => {},
+            onCancel: null,
         };
         setTasks((prev) => [...prev, newTask]);
         setShowProgressView(true);
 
-        await copyFile(item.path, destpath, ({ status, value, message, done, onCancel }) => {
+        await copyFile(item.path, destPath, ({ status, value, message, done, onCancel }) => {
             setTasks((prev) =>
                 prev.map((task) =>
                     task.taskId === taskId
@@ -219,16 +244,16 @@ function useProgressTasks(refreshItems, addNotification) {
     };
 
     const setItemForGfptar = async (command, targetDir, targetItems, destDir, options) => {
-        const taskId = destDir + Date.now();
-        const displayname = destDir.length > 20 ? destDir.slice(0, 20) + "..." : destDir;
+        removeDoneTasks();
+        const taskId = "gfptar-" + destDir + Date.now();
         const newTask = {
             taskId,
-            name: displayname,
+            name: destDir,
             value: undefined,
             type: "gfptar",
             status: command,
             message: "",
-            onCancel: () => {},
+            onCancel: null,
         };
         setTasks((prev) => [...prev, newTask]);
         setShowProgressView(true);
@@ -257,7 +282,6 @@ function useProgressTasks(refreshItems, addNotification) {
         showProgressView,
         itemsToMove,
         itemsToDelete,
-        setTasks,
         setShowProgressView,
         addItemsToUpload,
         addItemsToDownload,
@@ -265,6 +289,8 @@ function useProgressTasks(refreshItems, addNotification) {
         setItemsToDelete,
         setItemToCopy,
         setItemForGfptar,
+        removeDoneTasks,
+        removeTasks,
     };
 }
 

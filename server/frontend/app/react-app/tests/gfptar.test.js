@@ -275,7 +275,7 @@ test("Should display an error and show task status when tar operation fails", as
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 
-    const taskCard = page.locator(`[data-testid^="progress-card-${archiveName}"]`);
+    const taskCard = page.locator(`[data-testid^="progress-card-gfptar"]`);
     await expect(taskCard).toBeVisible();
     await expect(taskCard.locator(".badge")).toHaveText("error");
 

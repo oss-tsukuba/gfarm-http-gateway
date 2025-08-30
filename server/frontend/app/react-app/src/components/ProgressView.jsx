@@ -3,7 +3,7 @@ import Offcanvas from "bootstrap/js/dist/offcanvas";
 import { BsArrowUpSquare, BsArrowDownSquare, BsExclamationSquare } from "react-icons/bs";
 import PropTypes from "prop-types";
 
-function ProgressView({ show, onHide, tasks, setTasks }) {
+function ProgressView({ show, onHide, tasks, removeDoneTasks, removeTasks }) {
     const canvasRef = useRef(null);
     const instanceRef = useRef(null);
 
@@ -12,7 +12,7 @@ function ProgressView({ show, onHide, tasks, setTasks }) {
 
         const handleHide = () => {
             console.debug("debug handleHide");
-            setTasks((prev) => prev.filter((t) => !t.done || t.status === "error"));
+            removeDoneTasks();
             onHide();
         };
 
@@ -38,7 +38,7 @@ function ProgressView({ show, onHide, tasks, setTasks }) {
 
     const removeTask = (taskId) => {
         console.debug(taskId + " deleted");
-        setTasks((prev) => prev.filter((t) => t.taskId !== taskId));
+        removeTasks(taskId);
     };
 
     return (
@@ -68,12 +68,12 @@ function ProgressView({ show, onHide, tasks, setTasks }) {
                         {tasks.map((task, index) => (
                             <div
                                 className="card shadow-sm"
-                                key={`${task.name}-${index}`}
-                                data-testid={`progress-card-${task.name}-${index}`}
+                                key={`${task.taskId}-${index}`}
+                                data-testid={`progress-card-${task.taskId}-${index}`}
                             >
                                 <div className="card-body">
                                     <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 className="mb-0">
+                                        <h6 className="mb-0 text-truncate">
                                             {task.type === "upload" ? (
                                                 <BsArrowUpSquare className="me-2" />
                                             ) : task.type === "download" ? (
@@ -144,12 +144,12 @@ function ProgressView({ show, onHide, tasks, setTasks }) {
                                         >
                                             {task.message}
                                         </small>
-                                        {!task.done && (
+                                        {!task.done && task.onCancel && (
                                             <div style={{ alignSelf: "start" }}>
                                                 <button
                                                     className="btn btn-primary btn-sm"
                                                     onClick={task.onCancel}
-                                                    data-testid={`progress-button-cancel-${task.name}-${index}`}
+                                                    data-testid={`progress-button-cancel-${task.taskId}-${index}`}
                                                 >
                                                     Cancel
                                                 </button>
@@ -172,5 +172,6 @@ ProgressView.propTypes = {
     show: PropTypes.bool.isRequired,
     onHide: PropTypes.func.isRequired,
     tasks: PropTypes.array,
-    setTasks: PropTypes.func,
+    removeDoneTasks: PropTypes.func,
+    removeTasks: PropTypes.func,
 };
