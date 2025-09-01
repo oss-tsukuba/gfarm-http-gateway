@@ -4,10 +4,12 @@ import { get_acl } from "@utils/acl";
 function useGetAcl(item) {
     const [aclData, setAclData] = useState([]);
     const [aclError, setAclError] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const fetchAcl = useCallback(async () => {
         if (!item?.path) return;
         try {
+            setLoading(true);
             const res = await get_acl(item.path);
             if (res.error) {
                 throw new Error(res.error);
@@ -24,6 +26,8 @@ function useGetAcl(item) {
         } catch (err) {
             console.error("getAcl failed:", err);
             setAclError(err.message);
+        } finally {
+            setLoading(false);
         }
     }, [item]);
 
@@ -31,7 +35,7 @@ function useGetAcl(item) {
         fetchAcl();
     }, [fetchAcl]);
 
-    return { aclData, aclError, refreshAcl: fetchAcl };
+    return { aclData, aclError, refreshAcl: fetchAcl, aclLoading: loading };
 }
 
 export default useGetAcl;
