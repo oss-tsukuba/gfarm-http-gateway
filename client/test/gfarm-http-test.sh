@@ -389,11 +389,10 @@ clean() {
         echo "NG"
     fi
     # Clean up test files and directories
-    run_gfarm_http rm "$testfile" > /dev/null 2>&1 || :
-    run_gfarm_http rmdir "$testdir" > /dev/null 2>&1 || :
+    gfrm -r "$testdir" || true
+    echo "Remove $testdir"
 }
 
-trap clean EXIT
 
 echo "Starting gfarm-http client tests..."
 echo "Test directory: $testdir"
@@ -402,6 +401,9 @@ echo ""
 # Run all tests
 test_whoami
 test_mkdir
+
+# trap clean EXIT after test_mkdir to avoid deleting an existing dir
+trap clean EXIT
 test_ls
 test_ls_a
 test_ls_e
