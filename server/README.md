@@ -1,4 +1,4 @@
-# Setup gfarm-http-gateway
+# Set up gfarm-http-gateway
 
 ## Prerequisites
 
@@ -447,9 +447,10 @@ See **Configuration variables**
 
 ### Development environment in gfarm/docker/dist
 
-- setup gfarm/docker/dist (refer to (gfarm source)/docker/dist/README.md)
-  - setup `For OAuth authentication`
-  - setup `Use http proxy` (squid container)
+- set up gfarm/docker/dist (refer to (gfarm source)/docker/dist/README.md)
+  - set up `Explore on virtual clusters`
+  - set up `For OAuth authentication`
+  - set up `Use http proxy` (squid container)
 - clone(git clone) gfarm-http-gateway repository to (gfarm source)/gfarm-http-gateway
 - `make`
   - login to c1 container
