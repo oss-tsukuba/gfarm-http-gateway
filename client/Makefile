@@ -13,12 +13,14 @@ DESTDIR ?=
 INSTALL          ?= install
 INSTALL_PROGRAM  ?= $(INSTALL) -m 0755
 
+TAG := $(shell git describe --tags --match 'client/*' --dirty --always 2>/dev/null || git rev-parse --short HEAD)
+
 .PHONY: all build clean install uninstall test
 
 all: build
 
 build:
-	go build -o $(GFARM_HTTP) $(CMD_DIR)
+	go build -ldflags "-X 'main.Version=${TAG}'" -o $(GFARM_HTTP) $(CMD_DIR)
 
 install:
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)

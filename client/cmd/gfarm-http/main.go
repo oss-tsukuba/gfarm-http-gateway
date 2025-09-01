@@ -7,7 +7,11 @@ import (
 )
 
 func main() {
-	insecure, verbose, rest := parseGlobal()
+	insecure, verbose, rest, showVersion := parseGlobal()
+	if showVersion {
+		PrintVersion()
+		return
+	}
 	if len(rest) == 0 {
 		showRootHelp()
 		os.Exit(1)

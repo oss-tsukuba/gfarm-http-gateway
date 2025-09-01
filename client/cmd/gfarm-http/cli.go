@@ -146,9 +146,10 @@ func execCommand(client *Client, command string, args []string) {
 	exitErr(cmd.Handler(client, args))
 }
 
-func parseGlobal() (insecure, verbose bool, rest []string) {
+func parseGlobal() (insecure, verbose bool, rest []string, showVersion bool) {
 	insecure = false
 	verbose = false
+	showVersion = false
 
 	args := os.Args[1:]
 	for len(args) > 0 {
@@ -162,6 +163,8 @@ func parseGlobal() (insecure, verbose bool, rest []string) {
 			insecure = true
 		case "-v", "--verbose":
 			verbose = true
+		case "--version":
+			showVersion = true
 		case "-h", "--help":
 			showRootHelp()
 			os.Exit(0)
@@ -171,7 +174,7 @@ func parseGlobal() (insecure, verbose bool, rest []string) {
 		}
 		args = args[1:]
 	}
-	return insecure, verbose, args
+	return insecure, verbose, args, showVersion
 }
 
 func handleLs(client *Client, args []string) error {
