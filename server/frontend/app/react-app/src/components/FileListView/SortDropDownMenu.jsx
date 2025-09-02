@@ -25,7 +25,7 @@ function SortDropDownMenu({ sortDirection, setSortDirection }) {
     return (
         <div className="dropdown">
             <button
-                className="btn btn-sm dropdown-toggle fw-bold"
+                className="btn btn-sm dropdown-toggle"
                 type="button"
                 id="action-menu-dropdown"
                 data-bs-toggle="dropdown"

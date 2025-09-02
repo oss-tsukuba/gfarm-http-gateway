@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useCallback, useState, memo } from "react";
+import { VList } from "virtua";
 import FileIcon from "@components/FileListView/FileIcon";
 import { ItemMenu } from "@components/FileListView/FileActionMenu";
 import SortDropDownMenu from "@components/FileListView/SortDropDownMenu";
@@ -13,7 +14,147 @@ import {
     BsGridFill,
     BsGrid3X3GapFill,
 } from "react-icons/bs";
+import { FileItemShape } from "@hooks/useFileList";
 import PropTypes from "prop-types";
+
+const HEADER_ROW_MIN = 40;
+const DESKTOP_ROW_MIN = 60;
+const MOBILE_ROW_MIN = 60;
+const OVERSCAN_PX = 100; // virtual list overscan in pixels
+
+/* ===== Desktop row (memoized) ===== */
+const RowView = memo(function RowView({
+    item,
+    isSelected,
+    isLastSelected,
+    dateFormat,
+    ItemMenuActions,
+    onClick,
+    onDoubleClick,
+    onContextMenu,
+}) {
+    return (
+        <div
+            className={`align-middle d-grid ${isLastSelected ? "file-item-active" : ""}`}
+            style={{
+                gridTemplateColumns: "40px 36px 1fr 140px 180px 56px",
+                alignItems: "center",
+                minHeight: DESKTOP_ROW_MIN,
+                padding: "0 8px",
+                borderBottom: "1px solid var(--bs-border-color, #eee)",
+            }}
+            onContextMenu={onContextMenu}
+            data-testid={`row-${item.name}`}
+            onClick={() => onClick(!isSelected, item)}
+            onDoubleClick={() => onDoubleClick(item)}
+        >
+            <div>
+                <input
+                    type="checkbox"
+                    id={"checkbox-" + item.name}
+                    className="form-check-input"
+                    onChange={(e) => onClick(e.target.checked, item, true)}
+                    checked={isSelected}
+                />
+            </div>
+
+            <div>
+                <span className="me-2">
+                    <FileIcon
+                        filename={item.name}
+                        is_dir={item.is_dir}
+                        is_sym={item.is_sym}
+                        size={"1.8rem"}
+                    />
+                </span>
+            </div>
+
+            <div className="text-break">{item.name}</div>
+
+            <div className="text-nowrap">{formatFileSize(item.size, item.is_dir)}</div>
+
+            <div className="text-nowrap">{getTimeStr(item.mtime, dateFormat)}</div>
+
+            <div onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                <ItemMenu item={item} actions={ItemMenuActions} />
+            </div>
+        </div>
+    );
+});
+
+/* ===== Mobile row (memoized) ===== */
+const RowSmView = memo(function RowSmView({
+    item,
+    isSelected,
+    isLastSelected,
+    dateFormat,
+    ItemMenuActions,
+    onClick,
+    onDoubleClick,
+    onContextMenu,
+}) {
+    return (
+        <div
+            className={`align-middle ${isLastSelected ? "file-item-active" : ""}`}
+            style={{
+                minHeight: MOBILE_ROW_MIN,
+                padding: "8px 8px",
+                borderBottom: "1px solid var(--bs-border-color, #eee)",
+            }}
+            onContextMenu={onContextMenu}
+            data-testid={`row-sm-${item.name}`}
+        >
+            <div
+                className="d-grid"
+                style={{
+                    gridTemplateColumns: "40px 1fr 56px",
+                    alignItems: "center",
+                    columnGap: "8px",
+                }}
+            >
+                <div>
+                    <input
+                        type="checkbox"
+                        id={"checkbox-" + item.name + "-sm"}
+                        className="form-check-input"
+                        onChange={(e) => onClick(e.target.checked, item, true)}
+                        checked={isSelected}
+                    />
+                </div>
+
+                <div
+                    onClick={() => onClick(!isSelected, item)}
+                    onDoubleClick={() => onDoubleClick(item)}
+                >
+                    <div className="d-flex">
+                        <span className="me-2">
+                            <FileIcon
+                                filename={item.name}
+                                is_dir={item.is_dir}
+                                is_sym={item.is_sym}
+                                size={"1.8rem"}
+                            />
+                        </span>
+                        <div>
+                            <div className="text-break">{item.name}</div>
+                            <div className="small-info">
+                                <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+                                    {formatFileSize(item.size, item.is_dir)}
+                                    {item.is_dir ? " " : " | "}
+                                    {getTimeStr(item.mtime, dateFormat)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <ItemMenu item={item} actions={ItemMenuActions} />
+                </div>
+            </div>
+        </div>
+    );
+});
 
 function ListView({
     sortedItems,
@@ -30,276 +171,323 @@ function ListView({
     setContextMenu,
 }) {
     const headerCheckboxRef = useRef(null);
+    const desktopListRef = useRef(null);
+    const mobileListRef = useRef(null);
+    const firstDesktopRowRef = useRef(null);
+    const firstMobileRowRef = useRef(null);
     const { viewMode, setViewMode } = useViewMode();
     const { dateFormat } = useDateFormat();
-    const selectedSet = React.useMemo(
-        () => new Set(selectedItems?.map((x) => x.path)),
-        [selectedItems]
-    );
 
+    const selectedSet = useMemo(() => new Set(selectedItems?.map((x) => x.path)), [selectedItems]);
+
+    const GRID_COLS = "40px 36px 1fr 140px 180px 56px";
+
+    // Header checkbox indeterminate
     useEffect(() => {
-        if (headerCheckboxRef.current) {
-            if (selectedItems.length === 0) {
-                headerCheckboxRef.current.indeterminate = false;
-                headerCheckboxRef.current.checked = false;
-            } else if (selectedItems.length === sortedItems.length) {
-                headerCheckboxRef.current.indeterminate = false;
-                headerCheckboxRef.current.checked = true;
-            } else {
-                headerCheckboxRef.current.indeterminate = true;
-            }
+        const el = headerCheckboxRef.current;
+        if (!el) return;
+        if (selectedItems.length === 0) {
+            el.indeterminate = false;
+            el.checked = false;
+        } else if (selectedItems.length === sortedItems.length) {
+            el.indeterminate = false;
+            el.checked = true;
+        } else {
+            el.indeterminate = true;
         }
     }, [selectedItems, sortedItems]);
 
+    // Sort helpers
     const toggleSortDirection = (column) => {
-        setSortDirection((prevSort) => {
-            return {
-                column,
-                order: prevSort.column === column && prevSort.order === "asc" ? "desc" : "asc",
-            };
-        });
+        setSortDirection((prev) => ({
+            column,
+            order: prev.column === column && prev.order === "asc" ? "desc" : "asc",
+        }));
     };
+    const getSortIcon = (col) =>
+        sortDirection.column === col ? (
+            sortDirection.order === "asc" ? (
+                <BsArrowUpShort size="1.1rem" className="ms-1" data-testid="sort-icon-asc" />
+            ) : (
+                <BsArrowDownShort size="1.1rem" className="ms-1" data-testid="sort-icon-desc" />
+            )
+        ) : null;
 
-    const toggleViewMode = (mode) => {
-        if (mode === "list") {
-            return "icon_rg";
-        } else if (mode === "icon_rg") {
-            return "icon_sm";
-        } else {
-            return "list";
-        }
-    };
-
-    const toggleViewModeIcon = (mode) => {
-        if (mode === "list") {
-            return <BsGridFill />;
-        } else if (mode === "icon_rg") {
-            return <BsGrid3X3GapFill />;
-        } else {
-            return <BsListTask />;
-        }
-    };
-
-    const getSortIcon = (col) => {
-        if (sortDirection.column !== col) return null;
-        return sortDirection.order === "asc" ? (
-            <BsArrowUpShort size="1.1rem" className="ms-1" data-testid="sort-icon-asc" />
+    // View mode
+    const toggleViewMode = (mode) =>
+        mode === "list" ? "icon_rg" : mode === "icon_rg" ? "icon_sm" : "list";
+    const toggleViewModeIcon = (mode) =>
+        mode === "list" ? (
+            <BsGridFill />
+        ) : mode === "icon_rg" ? (
+            <BsGrid3X3GapFill />
         ) : (
-            <BsArrowDownShort size="1.1rem" className="ms-1" data-testid="sort-icon-desc" />
+            <BsListTask />
         );
-    };
+
+    // ===== Desktop filler calculation =====
+    const [desktopHeight, setDesktopHeight] = useState(0);
+    const [desktopRowHeight, setDesktopRowHeight] = useState(DESKTOP_ROW_MIN);
+
+    useEffect(() => {
+        const el = desktopListRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => setDesktopHeight(el.clientHeight || 0));
+        ro.observe(el);
+        setDesktopHeight(el.clientHeight || 0);
+        return () => ro.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const el = firstDesktopRowRef.current;
+        if (!el) return;
+        const h = el.getBoundingClientRect().height;
+        if (h && Math.abs(h - desktopRowHeight) > 0.5) setDesktopRowHeight(h);
+    }, [sortedItems, viewMode, desktopRowHeight]);
+
+    const desktopRowsHeight = (sortedItems?.length || 0) * desktopRowHeight;
+    const desktopFillerHeight = Math.max(0, desktopHeight - desktopRowsHeight);
+    const desktopHasFiller = desktopFillerHeight > 0;
+
+    // ===== Mobile filler calculation =====
+    const [mobileHeight, setMobileHeight] = useState(0);
+    const [mobileRowHeight, setMobileRowHeight] = useState(MOBILE_ROW_MIN);
+
+    useEffect(() => {
+        const el = mobileListRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => setMobileHeight(el.clientHeight || 0));
+        ro.observe(el);
+        setMobileHeight(el.clientHeight || 0);
+        return () => ro.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const el = firstMobileRowRef.current;
+        if (!el) return;
+        const h = el.getBoundingClientRect().height;
+        if (h && Math.abs(h - mobileRowHeight) > 0.5) setMobileRowHeight(h);
+    }, [sortedItems, viewMode, mobileRowHeight]);
+
+    const mobileRowsHeight = (sortedItems?.length || 0) * mobileRowHeight;
+    const mobileFillerHeight = Math.max(0, mobileHeight - mobileRowsHeight);
+    const mobileHasFiller = mobileFillerHeight > 0;
+
+    // Common row handlers (stable refs)
+    const onRowClick = useCallback(
+        (checkedOrToggle, item, isCheckbox = false) => {
+            if (isCheckbox) return handleSelectItem(checkedOrToggle, item);
+            return handleClick(checkedOrToggle, item);
+        },
+        [handleClick, handleSelectItem]
+    );
+    const onRowDbl = useCallback((item) => handleDoubleClick(item), [handleDoubleClick]);
+    const onRowCtx = useCallback(
+        (e, item) => {
+            e.preventDefault();
+            setContextMenu({ show: true, x: e.pageX, y: e.pageY, item });
+        },
+        [setContextMenu]
+    );
+
+    // Desktop header
+    const DesktopHeader = (
+        <div className="bg-body sticky-top border-bottom">
+            <div
+                className="align-middle d-grid px-2"
+                style={{
+                    gridTemplateColumns: GRID_COLS,
+                    alignItems: "center",
+                    minHeight: HEADER_ROW_MIN,
+                }}
+            >
+                <div>
+                    <input
+                        type="checkbox"
+                        className="form-check-input"
+                        ref={headerCheckboxRef}
+                        onChange={handleSelectAll}
+                        checked={
+                            selectedItems.length === sortedItems.length && sortedItems.length > 0
+                        }
+                        id="header-checkbox"
+                        data-testid="header-checkbox"
+                    />
+                </div>
+
+                {/* Icon column placeholder (match the number of columns in the body) */}
+                <div />
+
+                <div
+                    className="text-nowrap"
+                    onClick={() => toggleSortDirection("Name")}
+                    data-testid="header-name"
+                >
+                    Name {getSortIcon("Name")}
+                </div>
+
+                <div
+                    className="text-nowrap"
+                    onClick={() => toggleSortDirection("Size")}
+                    data-testid="header-size"
+                >
+                    Size {getSortIcon("Size")}
+                </div>
+
+                <div
+                    className="text-nowrap"
+                    onClick={() => toggleSortDirection("Modified")}
+                    data-testid="header-date"
+                >
+                    Modified {getSortIcon("Modified")}
+                </div>
+
+                <div
+                    className="text-end"
+                    onClick={() => setViewMode(toggleViewMode(viewMode))}
+                    data-testid="header-viewmode"
+                >
+                    {toggleViewModeIcon(viewMode)}
+                </div>
+            </div>
+        </div>
+    );
+
+    // Mobile header
+    const MobileHeader = (
+        <div className="bg-body sticky-top border-bottom">
+            <div
+                className="d-grid px-2"
+                style={{
+                    gridTemplateColumns: "40px 1fr 56px",
+                    alignItems: "center",
+                    minHeight: HEADER_ROW_MIN,
+                }}
+            >
+                <div>
+                    <input
+                        type="checkbox"
+                        className="form-check-input"
+                        ref={headerCheckboxRef}
+                        onChange={handleSelectAll}
+                        checked={
+                            selectedItems.length === sortedItems.length && sortedItems.length > 0
+                        }
+                        id="header-checkbox-sm"
+                        data-testid="header-checkbox-sm"
+                    />
+                </div>
+
+                <div className="d-flex align-items-center">
+                    <SortDropDownMenu
+                        sortDirection={sortDirection}
+                        setSortDirection={setSortDirection}
+                    />
+                </div>
+
+                <div
+                    className="text-end"
+                    onClick={() => setViewMode(toggleViewMode(viewMode))}
+                    data-testid="header-viewmode-sm"
+                >
+                    {toggleViewModeIcon(viewMode)}
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <>
-            <div className="d-none d-sm-block">
-                <table className="table file-table table-hover" data-testid="listview">
-                    <thead className="bg-body sticky-top">
-                        <tr>
-                            <th className="align-middle">
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    ref={headerCheckboxRef}
-                                    onChange={handleSelectAll}
-                                    checked={
-                                        selectedItems.length === sortedItems.length &&
-                                        sortedItems.length > 0
-                                    }
-                                    id="header-checkbox"
-                                    data-testid="header-checkbox"
-                                />
-                            </th>
-                            {/* <th onClick={() => toggleSortDirection("name")}></th> */}
-                            <th
-                                className="text-nowrap"
-                                colSpan={2}
-                                onClick={() => toggleSortDirection("Name")}
-                                data-testid="header-name"
-                            >
-                                Name {getSortIcon("Name")}
-                            </th>
-                            <th
-                                className="text-nowrap"
-                                onClick={() => toggleSortDirection("Size")}
-                                data-testid="header-size"
-                            >
-                                Size {getSortIcon("Size")}
-                            </th>
-                            <th
-                                className="text-nowrap"
-                                onClick={() => toggleSortDirection("Modified")}
-                                data-testid="header-date"
-                            >
-                                Modified {getSortIcon("Modified")}
-                            </th>
-                            <th
-                                onClick={() => setViewMode(toggleViewMode(viewMode))}
-                                data-testid="header-viewmode"
-                            >
-                                {toggleViewModeIcon(viewMode)}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedItems.map((item) => {
+            {/* Desktop: virtualized with VList */}
+            <div className="d-none d-sm-flex flex-column h-100" data-testid="listview">
+                {DesktopHeader}
+                <div ref={desktopListRef} className="flex-grow-1 min-vh-0">
+                    <VList
+                        style={{ height: "100%" }}
+                        count={sortedItems.length + (desktopHasFiller ? 1 : 0)}
+                        overscan={OVERSCAN_PX}
+                    >
+                        {(index) => {
+                            if (desktopHasFiller && index === sortedItems.length) {
+                                return (
+                                    <div
+                                        key="filler"
+                                        aria-hidden="true"
+                                        style={{ height: desktopFillerHeight }}
+                                    />
+                                );
+                            }
+                            const item = sortedItems[index];
                             const isSelected = selectedSet.has(item.path);
                             const isLastSelected = active && lastSelectedItem?.path === item.path;
+                            const refCb =
+                                index === 0 ? (el) => (firstDesktopRowRef.current = el) : undefined;
+
                             return (
-                                <tr
-                                    key={item.path}
-                                    className={`align-middle ${isLastSelected ? "table-active" : ""}`}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        setContextMenu({
-                                            show: true,
-                                            x: e.pageX,
-                                            y: e.pageY,
-                                            item,
-                                        });
-                                    }}
-                                    data-testid={`row-${item.name}`}
-                                >
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            id={"checkbox-" + item.name}
-                                            className="form-check-input"
-                                            onChange={(event) =>
-                                                handleSelectItem(event.target.checked, item)
-                                            }
-                                            checked={isSelected}
-                                        />
-                                    </td>
-                                    <td
-                                        onClick={() => handleClick(!isSelected, item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                    >
-                                        <span className="me-2">
-                                            <FileIcon
-                                                filename={item.name}
-                                                is_dir={item.is_dir}
-                                                is_sym={item.is_sym}
-                                                size={"1.8rem"}
-                                            />
-                                        </span>
-                                    </td>
-                                    <td
-                                        onClick={() => handleClick(!isSelected, item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                    >
-                                        <div className="text-break">{item.name}</div>
-                                    </td>
-                                    <td
-                                        onClick={() => handleClick(!isSelected, item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                    >
-                                        {formatFileSize(item.size, item.is_dir)}
-                                    </td>
-                                    <td
-                                        onClick={() => handleClick(!isSelected, item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                    >
-                                        {getTimeStr(item.mtime, dateFormat)}
-                                    </td>
-                                    <td>
-                                        <ItemMenu item={item} actions={ItemMenuActions} />
-                                    </td>
-                                </tr>
+                                <div key={item.path} ref={refCb} data-testid={`row-list-${index}`}>
+                                    <RowView
+                                        item={item}
+                                        isSelected={isSelected}
+                                        isLastSelected={isLastSelected}
+                                        dateFormat={dateFormat}
+                                        ItemMenuActions={ItemMenuActions}
+                                        onClick={onRowClick}
+                                        onDoubleClick={onRowDbl}
+                                        onContextMenu={(e) => onRowCtx(e, item)}
+                                    />
+                                </div>
                             );
-                        })}
-                    </tbody>
-                </table>
+                        }}
+                    </VList>
+                </div>
             </div>
 
-            <div className="d-block d-sm-none">
-                <table className="table file-table table-hover" data-testid="listview-sm">
-                    <thead className="bg-body sticky-top">
-                        <tr>
-                            <th className="align-middle">
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    ref={headerCheckboxRef}
-                                    onChange={handleSelectAll}
-                                    checked={
-                                        selectedItems.length === sortedItems.length &&
-                                        sortedItems.length > 0
-                                    }
-                                    id="header-checkbox-sm"
-                                    data-testid="header-checkbox-sm"
-                                />
-                            </th>
-                            <th data-testid="header-name-sm">
-                                <SortDropDownMenu
-                                    sortDirection={sortDirection}
-                                    setSortDirection={setSortDirection}
-                                />
-                            </th>
-                            <th
-                                onClick={() => setViewMode(toggleViewMode(viewMode))}
-                                data-testid="header-viewmode-sm"
-                            >
-                                {toggleViewModeIcon(viewMode)}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedItems.map((item) => {
+            {/* Mobile: also virtualized with VList */}
+            <div className="d-flex d-sm-none flex-column h-100" data-testid="listview-sm">
+                {MobileHeader}
+                <div ref={mobileListRef} className="flex-grow-1 min-vh-0">
+                    <VList
+                        style={{ height: "100%" }}
+                        count={sortedItems.length + (mobileHasFiller ? 1 : 0)}
+                        overscan={OVERSCAN_PX}
+                    >
+                        {(index) => {
+                            if (mobileHasFiller && index === sortedItems.length) {
+                                return (
+                                    <div
+                                        key="filler-sm"
+                                        aria-hidden="true"
+                                        style={{ height: mobileFillerHeight }}
+                                    />
+                                );
+                            }
+                            const item = sortedItems[index];
                             const isSelected = selectedSet.has(item.path);
                             const isLastSelected = active && lastSelectedItem?.path === item.path;
+                            const refCb =
+                                index === 0 ? (el) => (firstMobileRowRef.current = el) : undefined;
+
                             return (
-                                <tr
+                                <div
                                     key={item.path}
-                                    className={`align-middle ${isLastSelected ? "table-active" : ""}`}
-                                    data-testid={`row-sm-${item.name}`}
+                                    ref={refCb}
+                                    data-testid={`row-list-sm-${index}`}
                                 >
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            id={"checkbox-" + item.name + "-sm"}
-                                            className="form-check-input"
-                                            onChange={(event) =>
-                                                handleSelectItem(event.target.checked, item)
-                                            }
-                                            checked={isSelected}
-                                        />
-                                    </td>
-                                    <td
-                                        onClick={() => handleClick(!isSelected, item)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                    >
-                                        <div className="d-flex">
-                                            <span className="me-2">
-                                                <FileIcon
-                                                    filename={item.name}
-                                                    is_dir={item.is_dir}
-                                                    is_sym={item.is_sym}
-                                                    size={"1.8rem"}
-                                                />
-                                            </span>
-                                            <div>
-                                                <div className="text-break">{item.name}</div>
-                                                <div className="small-info">
-                                                    <div
-                                                        className="text-muted"
-                                                        style={{ fontSize: "0.8rem" }}
-                                                    >
-                                                        {formatFileSize(item.size, item.is_dir)}
-                                                        {item.is_dir ? " " : " | "}
-                                                        {getTimeStr(item.mtime, dateFormat)}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <ItemMenu item={item} actions={ItemMenuActions} />
-                                    </td>
-                                </tr>
+                                    <RowSmView
+                                        item={item}
+                                        isSelected={isSelected}
+                                        isLastSelected={isLastSelected}
+                                        dateFormat={dateFormat}
+                                        ItemMenuActions={ItemMenuActions}
+                                        onClick={onRowClick}
+                                        onDoubleClick={onRowDbl}
+                                        onContextMenu={(e) => onRowCtx(e, item)}
+                                    />
+                                </div>
                             );
-                        })}
-                    </tbody>
-                </table>
+                        }}
+                    </VList>
+                </div>
             </div>
         </>
     );
@@ -308,16 +496,51 @@ function ListView({
 export default ListView;
 
 ListView.propTypes = {
-    sortedItems: PropTypes.array,
-    selectedItems: PropTypes.array,
+    sortedItems: PropTypes.arrayOf(FileItemShape).isRequired,
+    selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     active: PropTypes.bool,
-    lastSelectedItem: PropTypes.object,
+    lastSelectedItem: FileItemShape,
+    ItemMenuActions: PropTypes.array, // tighten if you have a known action shape
+    handleClick: PropTypes.func.isRequired,
+    handleDoubleClick: PropTypes.func.isRequired,
+    handleSelectItem: PropTypes.func.isRequired,
+    handleSelectAll: PropTypes.func.isRequired,
+    sortDirection: PropTypes.shape({
+        column: PropTypes.string,
+        order: PropTypes.oneOf(["asc", "desc"]),
+    }).isRequired,
+    setSortDirection: PropTypes.func.isRequired,
+    setContextMenu: PropTypes.func.isRequired,
+};
+
+RowView.propTypes = {
+    item: FileItemShape.isRequired,
+    isSelected: PropTypes.bool.isRequired,
+    isLastSelected: PropTypes.bool,
+    dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
+    ItemMenuActions: PropTypes.array, // or shape(...) if you have a strict action type
+    onClick: PropTypes.func.isRequired,
+    onDoubleClick: PropTypes.func.isRequired,
+    onContextMenu: PropTypes.func.isRequired,
+};
+
+RowView.defaultProps = {
+    isLastSelected: false,
+    ItemMenuActions: [],
+};
+
+RowSmView.propTypes = {
+    item: FileItemShape.isRequired,
+    isSelected: PropTypes.bool.isRequired,
+    isLastSelected: PropTypes.bool,
+    dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
     ItemMenuActions: PropTypes.array,
-    handleClick: PropTypes.func,
-    handleDoubleClick: PropTypes.func,
-    handleSelectItem: PropTypes.func,
-    handleSelectAll: PropTypes.func,
-    sortDirection: PropTypes.object,
-    setSortDirection: PropTypes.func,
-    setContextMenu: PropTypes.func,
+    onClick: PropTypes.func.isRequired,
+    onDoubleClick: PropTypes.func.isRequired,
+    onContextMenu: PropTypes.func.isRequired,
+};
+
+RowSmView.defaultProps = {
+    isLastSelected: false,
+    ItemMenuActions: [],
 };

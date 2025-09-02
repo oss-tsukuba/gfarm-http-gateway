@@ -2,7 +2,7 @@ const { test, expect } = require("@playwright/test");
 const fs = require("fs");
 const path = require("path");
 
-const { FRONTEND_URL, API_URL } = require("./test_func");
+const { FRONTEND_URL, API_URL, toNDJSON } = require("./test_func");
 
 const DIR_LIST = path.resolve(__dirname, "data/datalist.json");
 
@@ -50,7 +50,7 @@ async function login_handleRoute(route, request) {
         await route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: JSON.stringify(jsonData),
+            body: toNDJSON(jsonData),
         });
     } else if (url.includes("/user_info")) {
         console.log("/user_info", url);

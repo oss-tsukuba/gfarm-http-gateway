@@ -278,7 +278,7 @@ test("Should upload a file via drag-and-drop and confirm in the modal", async ({
 
     await page.goto(`${FRONTEND_URL}/#${ROUTE_STORAGE}/`);
 
-    await page.waitForSelector(".file-table", {
+    await page.waitForSelector('[data-testid="storage-view"]', {
         timeout: 10000,
     });
 

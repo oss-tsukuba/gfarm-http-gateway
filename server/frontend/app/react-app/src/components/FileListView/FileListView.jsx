@@ -17,6 +17,7 @@ import { useViewMode } from "@context/ViewModeContext";
 import { useUserInfo } from "@context/UserInfoContext";
 import "@css/FileListView.css";
 import { BsHouse } from "react-icons/bs";
+import { FileItemShape } from "@hooks/useFileList";
 import PropTypes from "prop-types";
 
 function FileListView({
@@ -180,7 +181,7 @@ function FileListView({
     }, [lastSelectedItem]);
 
     return (
-        <div className="d-flex flex-column h-100">
+        <div className="d-flex flex-column h-100" data-testid="storage-view">
             <div className="flex-shrink-0">
                 <div className="d-flex mb-1">
                     <button
@@ -218,7 +219,7 @@ function FileListView({
                     </div>
                 </div>
             </div>
-            <div className="flex-grow-1 overflow-auto" style={{ zIndex: 0 }}>
+            <div className="flex-grow-1 overflow-hidden" style={{ zIndex: 0 }}>
                 {viewMode === "list" ? (
                     <ListView
                         sortedItems={sortedItems}
@@ -268,16 +269,16 @@ function FileListView({
 export default FileListView;
 
 FileListView.propTypes = {
-    parentName: PropTypes.string,
-    currentDir: PropTypes.string,
-    currentItems: PropTypes.array,
-    selectedItems: PropTypes.array,
-    setSelectedItems: PropTypes.func,
-    active: PropTypes.bool,
-    lastSelectedItem: PropTypes.object,
-    setLastSelectedItem: PropTypes.func,
-    ItemMenuActions: PropTypes.array,
-    UploadMenuActions: PropTypes.array,
-    SelectedMenuActions: PropTypes.array,
-    handleItemClick: PropTypes.func,
+    parentName: PropTypes.string.isRequired,
+    currentDir: PropTypes.string.isRequired,
+    currentItems: PropTypes.arrayOf(FileItemShape).isRequired,
+    selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
+    setSelectedItems: PropTypes.func.isRequired,
+    active: PropTypes.bool.isRequired,
+    lastSelectedItem: FileItemShape.isRequired,
+    setLastSelectedItem: PropTypes.func.isRequired,
+    ItemMenuActions: PropTypes.array.isRequired,
+    UploadMenuActions: PropTypes.array.isRequired,
+    SelectedMenuActions: PropTypes.array.isRequired,
+    handleItemClick: PropTypes.func.isRequired,
 };

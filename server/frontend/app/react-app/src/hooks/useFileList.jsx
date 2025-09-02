@@ -1,8 +1,9 @@
 // useFileList.jsx
 import { useState, useEffect, useCallback, useRef } from "react";
 import getList from "@utils/getList";
+import PropTypes from "prop-types";
 
-// 一覧で必要な最小フィールドだけ保持（メモリ節約）
+// Keep only the minimum fields needed in the list
 const pickListFields = (x) => ({
     name: x.name,
     size: x.size,
@@ -16,11 +17,10 @@ const pickListFields = (x) => ({
 function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
     const [items, setItems] = useState([]);
     const [listGetError, setListGetError] = useState(null);
-    // const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     // To prevent continuous calls and double fetches
     const abortRef = useRef(null);
-    const loadingRef = useRef(false);
     const seenRef = useRef(null);
 
     const fetchFiles = useCallback(async () => {
@@ -31,7 +31,7 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
 
         const ac = new AbortController();
         abortRef.current = ac;
-        loadingRef.current = true;
+        setLoading(true);
         setListGetError(null);
         setItems([]);
         seenRef.current = new Set();
@@ -58,7 +58,7 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
                 batchSize
             );
             setListGetError(null);
-            loadingRef.current = false;
+            setLoading(false);
             console.log("getList done");
         } catch (err) {
             if (err.name !== "AbortError") {
@@ -81,10 +81,19 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
     return {
         currentItems: items,
         listGetError,
-        loading: loadingRef.current,
+        loading,
         refreshItems: fetchFiles,
         abort: () => abortRef.current?.abort(),
     };
 }
 
 export default useFileList;
+
+export const FileItemShape = PropTypes.shape({
+    path: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    is_dir: PropTypes.bool,
+    is_sym: PropTypes.bool,
+    size: PropTypes.number,
+    mtime: PropTypes.oneOfType([PropTypes.number, PropTypes.string, PropTypes.instanceOf(Date)]),
+});

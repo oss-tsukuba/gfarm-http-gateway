@@ -1,36 +1,3 @@
-.file-table {
-    cursor: pointer;
-}
-
-.file-table th:nth-child(1), /* Input column */
-.file-table td:nth-child(1) {
-    width: 30px;
-}
-
-.file-table td:nth-child(2) { /* Icon column */
-    width: 40px;
-}
-
-.file-table th:nth-child(2),
-.file-table td:nth-child(3) {/* Name column */
-    width: auto;
-}
-
-.file-table th:nth-child(3),
-.file-table td:nth-child(4) {/* Size column */
-    width: 15%;
-}
-
-.file-table th:nth-child(4),
-.file-table td:nth-child(5) {/* Date column */
-    width: 20%;
-}
-
-.file-table th:nth-child(5),
-.file-table td:nth-child(6) {/* Menu column */
-    width: 50px;
-}
-
 .file-item {
     border-radius: 8px;
     transition: background-color 0.2s;

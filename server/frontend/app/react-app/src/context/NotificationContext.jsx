@@ -30,11 +30,11 @@ export function NotificationProvider({ children }) {
     return (
         <NotificationContext value={{ addNotification, removeNotification }}>
             {children}
-            <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 9999 }}>
+            <div className="position-fixed bottom-0 end-0" style={{ zIndex: 9999 }}>
                 {notifications.map((n) => (
                     <div
                         key={n.id}
-                        className={`toast show mb-2 ${
+                        className={`toast show mb-2 me-2 ${
                             n.type === "error"
                                 ? "bg-danger text-white"
                                 : n.type === "warning"
