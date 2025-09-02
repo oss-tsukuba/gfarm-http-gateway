@@ -2242,33 +2242,47 @@ async def dir_list(gfarm_path: str,
         raise gfarm_http_error(opname, code, message, "", elist)
 
     output_data = []
-    try:
-        async for entry in gfls_generator(
-                env, gfarm_path, is_file,
-                show_hidden=show_hidden,
-                recursive=recursive,
-                long_format=long_format,
-                time_format=time_format,
-                effperm=effperm,
-                ign_err=ign_err):
-            if isinstance(entry, Gfls_Entry):
-                if output_format == 'json':
-                    output_data.append(entry.json_dump())
+
+    async def list_generator():
+        try:
+            async for entry in gfls_generator(
+                    env, gfarm_path, is_file,
+                    show_hidden=show_hidden,
+                    recursive=recursive,
+                    long_format=long_format,
+                    time_format=time_format,
+                    effperm=effperm,
+                    ign_err=ign_err):
+                if isinstance(entry, Gfls_Entry):
+                    if output_format == 'json':
+                        # output_data.append(entry.json_dump())
+                        # print(entry.json_dump())
+                        yield json.dumps(entry.json_dump()) + "\n"
+                    else:
+                        # output_data.append(entry.line_dump())
+                        yield entry.line_dump() + "\n"
                 else:
-                    output_data.append(entry.line_dump())
+                    # output_data.append(entry)
+                    yield entry + "\n"
+        except RuntimeError as e:
+            message = f"Failed to execute gfls: path={gfarm_path} : {str(e)}"
+            if output_format == 'json':
+                yield json.dumps({"error": message}) + "\n"
             else:
-                output_data.append(entry)
-    except RuntimeError as e:
-        code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        message = f"Failed to execute gfls: path={gfarm_path}"
-        elist = []
-        raise gfarm_http_error(opname, code, message, str(e), elist)
+                yield message + "\n"
+            logger.error(
+                f"{ipaddr}:0 user={user}, cmd={opname}, {message}")
+            # raise gfarm_http_error(opname, code, message, str(e), elist)
 
     logger.debug(f"{ipaddr}:0 user={user}, cmd={opname}, stdout={output_data}")
     if output_format == 'json':
-        return JSONResponse(content=output_data)
+        return StreamingResponse(content=list_generator(),
+                                 media_type='application/x-ndjson')
+        # return JSONResponse(content=output_data)
 
-    return PlainTextResponse(content="\n".join(output_data))
+    return StreamingResponse(content=list_generator(),
+                             media_type='text/plain')
+    # return PlainTextResponse(content="\n".join(output_data))
 
 
 @app.get("/symlink/{gfarm_path:path}")
@@ -2873,7 +2887,7 @@ async def file_copy(copy_data: FileOperation,
             yield json.dumps(current_status) + "\n"
 
     return StreamingResponse(progress_generator(),
-                             media_type="application/json")
+                             media_type="application/x-ndjson")
 
 
 @app.post("/move")
@@ -3119,7 +3133,6 @@ async def get_usernames(request: Request,
             name_entries.append(entry_dict)
         return JSONResponse(content={"list": name_entries})
     else:
-        print("name_list", name_list)
         return JSONResponse(content={"list": name_list})
 
 
@@ -3280,4 +3293,4 @@ async def archive_files(
                     + f"os.remove({tokenfilepath}) error: {e}")
 
     return StreamingResponse(content=progress_generator(),
-                             media_type='application/json')
+                             media_type='application/x-ndjson')

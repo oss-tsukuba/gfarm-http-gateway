@@ -9,6 +9,7 @@ const {
     getTimeStr,
     getFileIconDefault,
     freezeTime,
+    toNDJSON,
     handleRoute,
     API_URL,
     FRONTEND_URL,
@@ -128,8 +129,8 @@ test("Should display a long file list correctly", async ({ page }) => {
 
         await route.fulfill({
             status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(largeFileList),
+            contentType: "application/x-ndjson",
+            body: toNDJSON(largeFileList),
         });
     });
 

@@ -221,11 +221,9 @@ export const getFileTypes = (files) => {
     const types = new Set();
 
     files.forEach((file) => {
-        if (file.type === "directory") {
-            types.add("folder");
-        } else {
-            const parts = file.name.split(".");
-            if (parts.length > 1) {
+        if (!file.is_dir) {
+            const parts = file.name?.split(".");
+            if (parts?.length > 1) {
                 types.add(parts.pop().toLowerCase());
             }
         }

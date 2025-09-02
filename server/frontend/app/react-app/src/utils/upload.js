@@ -100,7 +100,6 @@ async function upload(file, fullPath, dirSet, progressCallback, setError) {
 async function checkPermission(uploadDir) {
     const epath = encodePath(uploadDir);
     const fullPath = `${API_URL}/dir${epath}?show_hidden=on&effperm=on`;
-    let error = null;
     try {
         const response = await fetch(fullPath, {
             credentials: "include",
@@ -110,17 +109,66 @@ async function checkPermission(uploadDir) {
             const message = get_error_message(response.status, error.detail);
             throw new Error(message);
         }
-        const data = await response.json();
-        if (data[0].perms.includes("w")) {
-            console.debug("permission check", uploadDir, data[0].perms.includes("w"));
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("Empty response body");
+
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let perms = "";
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const nl = buffer.indexOf("\n");
+                if (nl !== -1) {
+                    const firstLine = buffer.slice(0, nl).trim();
+                    if (firstLine) {
+                        let json;
+                        try {
+                            json = JSON.parse(firstLine);
+                        } catch (e) {
+                            console.warn("Failed to parse line", e);
+                        }
+                        if (json && typeof json.perms === "string") perms = json.perms;
+                    }
+                    break;
+                }
+            }
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch {
+                console.warn("upload: failed to releaseLock()");
+            }
+        }
+
+        if (!perms) {
+            try {
+                const fallback = await response.clone().json();
+                if (Array.isArray(fallback) && fallback[0]?.perms) {
+                    perms = String(fallback[0].perms);
+                }
+            } catch (e) {
+                console.warn("upload: Failed to get perms", e);
+            }
+        }
+
+        if (!perms) {
+            throw new Error("Failed to read permission info");
+        }
+
+        if (perms.includes("w")) {
+            console.debug("permission check", uploadDir, true);
+            return null;
         } else {
-            const message = get_error_message(403, `Permission denied : ${uploadDir}`);
-            throw new Error(message);
+            throw new Error(get_error_message(403, `Permission denied : ${uploadDir}`));
         }
     } catch (err) {
-        error = `${err.name}: ${err.message}`;
+        return `${err.name}: ${err.message}`;
     }
-    return error;
 }
 
 export { upload, checkPermission };

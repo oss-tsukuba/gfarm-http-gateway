@@ -62,36 +62,40 @@ async function gfptar(
         let buffer = "";
         const indirList = [];
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
+                buffer += decoder.decode(value, { stream: true });
 
-            let lines = buffer.split("\n");
-            buffer = lines.pop();
-            for (const line of lines) {
-                if (line.trim() === "") continue;
-                try {
-                    const json = JSON.parse(line);
-                    if (json.error) {
-                        throw new Error(`500 ${json.error}`);
+                let lines = buffer.split("\n");
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (line.trim() === "") continue;
+                    try {
+                        const json = JSON.parse(line);
+                        if (json.error) {
+                            throw new Error(`500 ${json.error}`);
+                        }
+                        if (command === "list") {
+                            indirList.push(json.message);
+                            progressCallback({
+                                message: indirList,
+                            });
+                        } else {
+                            progressCallback({
+                                value: undefined,
+                                message: json.message,
+                            });
+                        }
+                    } catch (err) {
+                        console.warn("Failed to parse line:", line, err);
                     }
-                    if (command === "list") {
-                        indirList.push(json.message);
-                        progressCallback({
-                            message: indirList,
-                        });
-                    } else {
-                        progressCallback({
-                            value: undefined,
-                            message: json.message,
-                        });
-                    }
-                } catch (err) {
-                    console.warn("Failed to parse line:", line, err);
                 }
             }
+        } finally {
+            reader.releaseLock();
         }
         progressCallback({
             status: "completed",

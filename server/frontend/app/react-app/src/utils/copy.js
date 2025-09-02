@@ -48,53 +48,57 @@ async function copyFile(srcpath, destpath, progressCallback) {
         const decoder = new TextDecoder("utf-8");
         const reader = response.body.getReader();
         let buffer = "";
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
+                buffer += decoder.decode(value, { stream: true });
 
-            let lines = buffer.split("\n");
-            buffer = lines.pop();
-            for (const line of lines) {
-                if (line.trim() === "") continue;
-                let json = "";
-                try {
-                    json = JSON.parse(line);
-                } catch (err) {
-                    console.warn("Failed to parse line:", line, err);
-                    continue;
-                }
+                let lines = buffer.split("\n");
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (line.trim() === "") continue;
+                    let json = "";
+                    try {
+                        json = JSON.parse(line);
+                    } catch (err) {
+                        console.warn("Failed to parse line:", line, err);
+                        continue;
+                    }
 
-                if (json.warn) {
-                    progressCallback({
-                        message: json.warn,
-                    });
-                }
-                if (json.error) {
-                    throw new Error(`500 ${json.error}`);
-                }
-                if (json.done) {
-                    console.debug("Copy complete", json);
-                    if (!json.warn) progressCallback({ message: "" });
-                    break;
-                }
-                const copied = json.copied;
-                const total = json.total;
-                if (copied && total) {
-                    const percent = getProgress(copied, total);
-                    const elapsed = Date.now() - startTime; // msec.
-                    const speed = Math.round((copied / elapsed) * 1000);
-                    const sec = Math.floor(elapsed / 1000);
-                    const message = percent
-                        ? `${percent} % | ${sec} sec | ${speed} bytes/sec`
-                        : `${sec} sec | ${speed} bytes/sec`;
-                    progressCallback({
-                        value: percent,
-                        message,
-                    });
+                    if (json.warn) {
+                        progressCallback({
+                            message: json.warn,
+                        });
+                    }
+                    if (json.error) {
+                        throw new Error(`500 ${json.error}`);
+                    }
+                    if (json.done) {
+                        console.debug("Copy complete", json);
+                        if (!json.warn) progressCallback({ message: "" });
+                        break;
+                    }
+                    const copied = json.copied;
+                    const total = json.total;
+                    if (copied && total) {
+                        const percent = getProgress(copied, total);
+                        const elapsed = Date.now() - startTime; // msec.
+                        const speed = Math.round((copied / elapsed) * 1000);
+                        const sec = Math.floor(elapsed / 1000);
+                        const message = percent
+                            ? `${percent} % | ${sec} sec | ${speed} bytes/sec`
+                            : `${sec} sec | ${speed} bytes/sec`;
+                        progressCallback({
+                            value: percent,
+                            message,
+                        });
+                    }
                 }
             }
+        } finally {
+            reader.releaseLock();
         }
         progressCallback({
             status: "completed",

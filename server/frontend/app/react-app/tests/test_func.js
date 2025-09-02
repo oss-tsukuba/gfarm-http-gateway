@@ -411,6 +411,12 @@ const initializeFileStructureData = () => {
     }
 };
 
+export const toNDJSON = (data) => {
+    if (Array.isArray(data)) return data.map((x) => JSON.stringify(x)).join("\n") + "\n";
+    if (data && typeof data === "object") return JSON.stringify(data) + "\n";
+    return "";
+};
+
 /**
  * Handle /dir/ GET requests
  */
@@ -422,8 +428,8 @@ const handleDirGetRoute = async (route, url, requestUrl) => {
     if (effperm) {
         await route.fulfill({
             status: 200,
-            contentType: "application/json",
-            body: JSON.stringify([{ perms: "rwx" }]),
+            contentType: "application/x-ndjson",
+            body: toNDJSON([{ perms: "rwx" }]),
         });
         console.log("return /dir/", [{ perms: "rwx" }]);
         return;
@@ -433,8 +439,8 @@ const handleDirGetRoute = async (route, url, requestUrl) => {
     if (jsonData !== null) {
         await route.fulfill({
             status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(jsonData),
+            contentType: "application/x-ndjson",
+            body: toNDJSON(jsonData),
         });
     } else {
         const responseData = {

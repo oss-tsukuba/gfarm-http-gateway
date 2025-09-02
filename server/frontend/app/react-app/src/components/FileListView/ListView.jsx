@@ -32,6 +32,10 @@ function ListView({
     const headerCheckboxRef = useRef(null);
     const { viewMode, setViewMode } = useViewMode();
     const { dateFormat } = useDateFormat();
+    const selectedSet = React.useMemo(
+        () => new Set(selectedItems?.map((x) => x.path)),
+        [selectedItems]
+    );
 
     useEffect(() => {
         if (headerCheckboxRef.current) {
@@ -138,9 +142,7 @@ function ListView({
                     </thead>
                     <tbody>
                         {sortedItems.map((item) => {
-                            const isSelected = selectedItems.some(
-                                (selected) => selected.path === item.path
-                            );
+                            const isSelected = selectedSet.has(item.path);
                             const isLastSelected = active && lastSelectedItem?.path === item.path;
                             return (
                                 <tr
@@ -243,9 +245,7 @@ function ListView({
                     </thead>
                     <tbody>
                         {sortedItems.map((item) => {
-                            const isSelected = selectedItems.some(
-                                (selected) => selected.path === item.path
-                            );
+                            const isSelected = selectedSet.has(item.path);
                             const isLastSelected = active && lastSelectedItem?.path === item.path;
                             return (
                                 <tr
