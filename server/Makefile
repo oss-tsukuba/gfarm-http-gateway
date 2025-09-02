@@ -5,8 +5,8 @@ test-all: test-unit test-flake8 test-playwright test-client
 test-unit:
 	./bin/gfarm-http-gateway-test.sh
 
-test-verbose test-v:
-	./bin/gfarm-http-gateway-test.sh -v
+test-unit-verbose test-unit-v:
+	./bin/gfarm-http-gateway-test.sh -s
 	
 test-client:
 	../client/test/gfarm-http-test.sh /tmp

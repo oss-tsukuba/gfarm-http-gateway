@@ -716,7 +716,6 @@ async def get_token(request: Request):
             return None
     if not await is_expired_token(token):
         return token
-    logger.debug("!!!!!!!!!token is expired")
     new_token = await use_refresh_token(request, token)
     if not await is_expired_token(new_token, use_raise=True):
         return new_token

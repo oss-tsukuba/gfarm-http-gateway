@@ -65,13 +65,13 @@ test("Should move multiple files from the actions menu", async ({ page }) => {
     const destinationDirectory = "/images";
     const filesToMove = ["report.docx", "meeting_notes.txt"];
 
-    let api_count = 0;
+    const seen = [];
     await page.route(`${API_URL}/move`, async (route) => {
-        console.log(`[ROUTE MOCK] Simulating move for: ${filesToMove[api_count]}`);
+        console.log(`[ROUTE MOCK] Simulating move`);
         const request = route.request();
-        const bodyText = request.postData();
+        const body = request.postDataJSON();
 
-        await expect(bodyText).toContain(filesToMove[api_count++]);
+        seen.push(body.source);
         await page.waitForTimeout(1000);
         await route.fulfill({
             status: 200,
@@ -106,6 +106,11 @@ test("Should move multiple files from the actions menu", async ({ page }) => {
     // Should show deleting overlay
     await expect(page.locator('[data-testid="move-overlay"]')).toBeVisible();
     await expect(page.locator('[data-testid="move-overlay"]')).not.toBeVisible();
+
+    // Wait until exactly N POST /move requests were made (one per file)
+    await expect.poll(() => seen.length, { timeout: 5000 }).toBe(filesToMove.length);
+    const seenNames = new Set(seen.map((b) => b.split("/").pop()));
+    expect(seenNames).toEqual(new Set(filesToMove));
 });
 
 test("Should show name conflict prompt when destination has duplicate files", async ({ page }) => {

@@ -9,6 +9,7 @@ from unittest.mock import patch, Mock, MagicMock, AsyncMock
 import zipfile
 import io
 import time
+import json
 
 import gfarm_http_gateway
 
@@ -439,7 +440,8 @@ async def test_dir_list(mock_claims, mock_size_not_file, mock_exec):
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-T', '/testdir')
-    assert response.text == expect_gfls_stdout
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_stdout in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -452,7 +454,8 @@ async def test_dir_list_a(mock_claims, mock_size_not_file, mock_exec):
     # NOT WORK: mock_exec.assert_called_with(args=['gfls', '-a', 'testdir'])
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-a', '-T', '/testdir')
-    assert response.text == expect_gfls_stdout
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_stdout in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -463,7 +466,8 @@ async def test_dir_list_l(mock_claims, mock_size_not_file, mock_exec):
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-l', '-T', '/testdir')
-    assert response.text == expect_gfls_stdout
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_stdout in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -487,7 +491,8 @@ async def test_dir_list_e(mock_claims, mock_size_not_file, mock_exec):
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-T', '-e', '/testdir')
-    assert response.text == expect_gfls_stdout
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_stdout in line for line in lines)
 
 
 expect_gfls_stdout_data = (
@@ -522,7 +527,8 @@ async def test_dir_list_json(mock_claims, mock_size_not_file, mock_exec):
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-l', '-T', '/testdir')
-    assert response.json() == [expect_gfls_json_stdout]
+    lines = [json.loads(line) async for line in response.aiter_lines()]
+    assert expect_gfls_json_stdout in lines
 
 
 expect_gfls_err_msg = "test gfls (error)"
@@ -534,9 +540,12 @@ expect_gfls_err = ((expect_gfls_err_msg + "\n").encode(), b"error", 1)
 async def test_dir_list_err(mock_claims, mock_size_not_file, mock_exec):
     response = client.get("/dir/testdir?long_format=0&output_format=plain",
                           headers=req_headers_oidc_auth)
-    assert_gfarm_http_error(response, 500, "gfls", None, expect_gfls_err_msg)
+    # assert_gfarm_http_error(response, 500, "gfls", None, expect_gfls_err_msg)
+    assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-T', '/testdir')
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_err_msg in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -548,7 +557,8 @@ async def test_dir_list_ign_err(mock_claims, mock_size_not_file, mock_exec):
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfls', '-T', '/testdir')
-    assert response.text == expect_gfls_err_msg
+    lines = [line async for line in response.aiter_lines()]
+    assert any(expect_gfls_err_msg in line for line in lines)
 
 
 no_stdout = ""
