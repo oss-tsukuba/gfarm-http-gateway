@@ -48,7 +48,7 @@ const RowView = memo(function RowView({
             onClick={() => onClick(!isSelected, item)}
             onDoubleClick={() => onDoubleClick(item)}
         >
-            <div>
+            <div onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                 <input
                     type="checkbox"
                     id={"checkbox-" + item.name}
