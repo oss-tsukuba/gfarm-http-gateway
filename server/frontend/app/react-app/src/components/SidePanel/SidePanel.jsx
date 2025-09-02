@@ -49,7 +49,7 @@ function SidePanel({ show, item, onHide, showTab = "detail" }) {
             data-testid="sidepanel"
         >
             <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
-                {item && <h5 className="m-0">{item.name}</h5>}
+                {item && <h5 className="m-0 text-truncate">{item.name}</h5>}
                 <button className="btn-close" onClick={onHide}></button>
             </div>
             <div className="px-3 pt-2">
