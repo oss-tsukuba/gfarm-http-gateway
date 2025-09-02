@@ -15,6 +15,22 @@ const exportDirectory = "/archives";
 const filesToGfptar = ["report.docx", "meeting_notes.txt"];
 const archiveName = "/test-archive";
 
+async function waitForProgressView(page, expectedFileName, expectedMessage) {
+    const progressView = page.locator('[data-testid="progress-view"]');
+
+    const taskCard = progressView.locator(`[data-testid^="progress-card-gfptar"]`);
+    await expect(taskCard).toBeVisible();
+
+    await expect(taskCard.locator("h6")).toContainText(expectedFileName);
+
+    const progressBar = taskCard.locator(".progress-bar");
+    await expect(progressBar).toBeVisible();
+    await expect(taskCard.locator(".badge")).toHaveText("completed");
+
+    const message = taskCard.locator(`[data-testid^="task-message-"]`);
+    await expect(message).toHaveText(expectedMessage);
+}
+
 // === Tests ===
 test.beforeEach(async ({ context }) => {
     await context.route(`${API_URL}/**`, (route, request) => handleRoute(route, request));
@@ -61,17 +77,19 @@ async function mockGfptarRoute(
         },
         statusCode: 200,
         contentType: "application/json",
-        response: JSON.stringify(mockResponse),
+        response: JSON.stringify(mockResponse) + "\n",
     });
 }
 
 test("Should create an archive from selected files", async ({ page }) => {
+    const expectedMessage = "Tar operation completed";
     await mockGfptarRoute(page, {
         expectedCommand: "create",
         expectedBasedir: "gfarm:" + currentDirectory,
         expectedOutdir: "gfarm:" + archiveName,
         expectedSources: filesToGfptar,
         expectedOptions: [],
+        mockResponse: { message: expectedMessage },
     });
 
     await page.goto(`${FRONTEND_URL}/#${ROUTE_STORAGE}${currentDirectory}`);
@@ -100,14 +118,18 @@ test("Should create an archive from selected files", async ({ page }) => {
     await confirmButton.click();
 
     await expect(gfptarModal).not.toBeVisible();
+
+    await waitForProgressView(page, archiveName, expectedMessage);
 });
 test("Should update an existing archive with selected files", async ({ page }) => {
+    const expectedMessage = "Tar operation completed";
     await mockGfptarRoute(page, {
         expectedCommand: "update",
         expectedBasedir: "gfarm:" + currentDirectory,
         expectedOutdir: "gfarm:" + archiveName,
         expectedSources: filesToGfptar,
         expectedOptions: [],
+        mockResponse: { message: expectedMessage },
     });
 
     await page.goto(`${FRONTEND_URL}/#${ROUTE_STORAGE}${currentDirectory}`);
@@ -133,15 +155,19 @@ test("Should update an existing archive with selected files", async ({ page }) =
     await confirmButton.click();
 
     await expect(gfptarModal).not.toBeVisible();
+
+    await waitForProgressView(page, archiveName, expectedMessage);
 });
 
 test("Should append files to an existing archive", async ({ page }) => {
+    const expectedMessage = "Tar operation completed";
     await mockGfptarRoute(page, {
         expectedCommand: "append",
         expectedBasedir: "gfarm:" + currentDirectory,
         expectedOutdir: "gfarm:" + archiveName,
         expectedSources: filesToGfptar,
         expectedOptions: [],
+        mockResponse: { message: expectedMessage },
     });
 
     await page.goto(`${FRONTEND_URL}/#${ROUTE_STORAGE}${currentDirectory}`);
@@ -167,6 +193,8 @@ test("Should append files to an existing archive", async ({ page }) => {
     await confirmButton.click();
 
     await expect(gfptarModal).not.toBeVisible();
+
+    await waitForProgressView(page, archiveName, expectedMessage);
 });
 
 test("Should retrieve archive members for extraction", async ({ page }) => {
@@ -214,6 +242,7 @@ test("Should retrieve archive members for extraction", async ({ page }) => {
 
 test("Should extract files from an archive to the specified directory", async ({ page }) => {
     const archiveName = "documents";
+    const expectedMessage = "Tar operation completed";
 
     await mockGfptarRoute(page, {
         expectedCommand: "extract",
@@ -221,6 +250,7 @@ test("Should extract files from an archive to the specified directory", async ({
         expectedOutdir: "gfarm:" + exportDirectory,
         expectedSources: [],
         expectedOptions: [],
+        mockResponse: { message: expectedMessage },
     });
 
     await page.goto(`${FRONTEND_URL}/#${ROUTE_STORAGE}${currentDirectory}`);
@@ -243,6 +273,8 @@ test("Should extract files from an archive to the specified directory", async ({
     await confirmButton.click();
 
     await expect(gfptarModal).not.toBeVisible();
+
+    await waitForProgressView(page, exportDirectory, expectedMessage);
 });
 
 test("Should display an error and show task status when tar operation fails", async ({ page }) => {
