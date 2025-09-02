@@ -103,7 +103,8 @@ urlpathencode() {
 }
 
 gf_test_base_dir=$(urlpathencode "$1")
-testdir="${gf_test_base_dir}/gfarm-http-test"
+rand_suffix=$(date +%s%N | sha1sum | cut -c1-8)
+testdir="${gf_test_base_dir}/$(basename "$(mktemp -u gfarm-http-test-XXXXXX)")"
 testfile="${testdir}/testfile.txt"
 
 # Helper function to run gfarm-http commands
@@ -389,6 +390,7 @@ clean() {
         echo "NG"
     fi
     # Clean up test files and directories
+    run_gfarm_http rm -rf "$testdir" > /dev/null || true
     gfrm -r "$testdir" || true
     echo "Remove $testdir"
 }
