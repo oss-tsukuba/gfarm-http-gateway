@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import SuggestInput from "@components/SuggestInput";
 import MiniFileListView from "@components/FileListView/MiniFileListView";
@@ -33,7 +33,7 @@ function ArchiveModal({
     const [options, setOptions] = useState("");
     const [indirList, setIndirList] = useState([]);
     const [selectedFromList, setSelectedFromList] = useState([]);
-    const suggestions = currentItems.filter((file) => file.is_dir);
+    const suggestions = useMemo(() => currentItems.filter((f) => f.is_dir), [currentItems]);
     const { addNotification } = useNotifications();
 
     useEffect(() => {
@@ -55,10 +55,10 @@ function ArchiveModal({
         } else {
             setError(null);
         }
-        if (destDir.endsWith("/")) {
+        if (suggestDir !== destDir && destDir.endsWith("/")) {
             setSuggestDir(destDir);
         }
-    }, [destDir]);
+    }, [destDir, suggestions]);
 
     const handleChange = (input) => {
         setDestDir(input);

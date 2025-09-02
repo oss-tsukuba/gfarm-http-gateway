@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import { useShowHidden } from "@context/ShowHiddenContext";
 import { useNotifications } from "@context/NotificationContext";
@@ -19,8 +19,8 @@ function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
     const [uploadDir, setUploadDir] = useState(currentDir);
     const [suggestDir, setSuggestDir] = useState(null);
     const { currentItems } = useFileList(uploadDir, showHidden);
-    const { currentItems: suggestions } = useFileList(suggestDir, showHidden);
-    const suggestionDirs = currentItems.filter((file) => file.is_dir);
+    const { currentItems: targetSuggestions } = useFileList(suggestDir, showHidden);
+    const linknameSuggestions = useMemo(() => currentItems.filter((f) => f.is_dir), [currentItems]);
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState(null);
     const { addNotification } = useNotifications();
@@ -146,7 +146,7 @@ function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
                             id="symlink-linkname-input"
                             value={linkName}
                             onChange={(value) => setLinkName(value)}
-                            suggestions={suggestionDirs.map((item) => ({
+                            suggestions={linknameSuggestions.map((item) => ({
                                 name: item.path,
                                 value: item.path,
                             }))}
@@ -171,7 +171,7 @@ function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
                                 id="symlink-target-input"
                                 value={sourcePath}
                                 onChange={(value) => setSourcePath(value)}
-                                suggestions={suggestions.map((item) => ({
+                                suggestions={targetSuggestions.map((item) => ({
                                     name: item.path,
                                     value: item.path,
                                 }))}

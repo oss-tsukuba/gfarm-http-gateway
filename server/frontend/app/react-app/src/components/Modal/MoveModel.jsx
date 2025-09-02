@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import SuggestInput from "@components/SuggestInput";
 import ConflictResolutionModal from "@components/Modal/ConflictResolutionModal";
@@ -18,13 +18,17 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
     const [isMoving, setIsMoving] = useState(false);
     const [suggestDir, setSuggestDir] = useState(currentDir);
     const [targetPath, setTargetPath] = useState(currentDir);
-    const { currentItems, listGetError } = useFileList(suggestDir, showHidden);
+    const {
+        currentItems,
+        listGetError,
+        loading: listLoading,
+    } = useFileList(suggestDir, showHidden);
     const [loading, setLoading] = useState(true);
     const [loadingText, setLoadingText] = useState("Loading suggestions...");
     const [showConflictModal, setShowConflictModal] = useState(false);
     const [pendingItems, setPendingItems] = useState([]);
     const [pendingConfirm, setPendingConfirm] = useState(false);
-    const suggestions = currentItems.filter((file) => file.is_dir);
+    const suggestions = useMemo(() => currentItems.filter((f) => f.is_dir), [currentItems]);
     const { addNotification } = useNotifications();
 
     useEffect(() => {
@@ -65,7 +69,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
     };
 
     useEffect(() => {
-        if (!loading && pendingConfirm) {
+        if (!loading && !listLoading && pendingConfirm) {
             const res = checkConflicts(pendingItems, currentItems);
             console.debug("res", res);
             if (res.hasConflict) {
@@ -77,7 +81,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
             setPendingConfirm(false);
             handleMove(pendingItems);
         }
-    }, [loading, pendingConfirm]);
+    }, [loading, listLoading, pendingConfirm]);
 
     const handleChange = (input) => {
         setTargetPath(input);
@@ -115,6 +119,8 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
             return;
         }
         setVisible(false);
+
+        setIsMoving(true);
 
         if (suggestDir !== targetPath) {
             setSuggestDir(targetPath);
