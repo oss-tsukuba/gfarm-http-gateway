@@ -158,6 +158,68 @@ GFARM_HTTP_TOKEN_ISSUERS=
 #   log the claim in access token as username
 GFARM_HTTP_TOKEN_USER_CLAIM=sub
 
+# GFARM_HTTP_TOKEN_STORE
+#   Selects where tokens are stored
+#   value :
+#      session  : tokens are kept in the HTTP session (default)
+#      database : tokens are stored in Database
+GFARM_HTTP_TOKEN_STORE="session"
+
+# ========================================
+# Database (Redis) settings
+# ========================================
+# GFARM_HTTP_REDIS_HOST
+#   Redis server hostname
+#   ex.: GFARM_HTTP_REDIS_HOST=localhost
+GFARM_HTTP_REDIS_HOST=
+
+# GFARM_HTTP_REDIS_PORT
+#   Redis server port number.
+#   ex.: GFARM_HTTP_REDIS_PORT=6379
+GFARM_HTTP_REDIS_PORT=6379
+
+# GFARM_HTTP_REDIS_DB
+#   Redis logical database index.
+#   ex.: GFARM_HTTP_REDIS_DB=0
+GFARM_HTTP_REDIS_DB=0
+
+# GFARM_HTTP_REDIS_SSL
+#   Enable or disable TLS for Redis connection.
+#   value :
+#      no  : plain TCP connection
+#      yes : use SSL/TLS
+GFARM_HTTP_REDIS_SSL=
+
+# GFARM_HTTP_REDIS_SSL_CERTFILE (optional)
+# GFARM_HTTP_REDIS_SSL_KEYFILE  (optional)
+#   Path to client certificate (PEM) and private key (PEM).
+#   These are required ONLY if the Redis server is configured for mutual TLS (mTLS)
+#   and requires the client to present its own certificate.
+#   ex.: 
+#     GFARM_HTTP_REDIS_SSL_CERTFILE=/etc/ssl/redis/client-cert.pem
+#     GFARM_HTTP_REDIS_SSL_KEYFILE=/etc/ssl/redis/client-key.pem
+GFARM_HTTP_REDIS_SSL_CERTFILE=
+GFARM_HTTP_REDIS_SSL_KEYFILE=
+
+# GFARM_HTTP_REDIS_SSL_CA_CERTS
+#   Path to CA certificate bundle file (PEM) used to validate the Redis server certificate.
+#   If omitted and SSL is enabled, system default CAs will be used.
+#   ex.: GFARM_HTTP_REDIS_SSL_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+GFARM_HTTP_REDIS_SSL_CA_CERTS=
+
+# GFARM_HTTP_REDIS_ID_PREFIX (optional)
+#   Prefix added to all Redis keys created by the gateway.
+#   Useful when multiple apps share a Redis instance.
+#   ex.: GFARM_HTTP_REDIS_ID_PREFIX=gfarm
+GFARM_HTTP_REDIS_ID_PREFIX=
+
+# GFARM_HTTP_REDIS_TTL
+#   Time-to-live (seconds) for Redis-stored tokens.
+#   After this period the token entry is automatically removed.
+#   Set to 0 or leave empty to store without expiry (will be overwritten on refresh).
+#   ex.: GFARM_HTTP_REDIS_TTL=86400
+GFARM_HTTP_REDIS_TTL=86400
+
 # ========================================
 # Performance
 # ========================================

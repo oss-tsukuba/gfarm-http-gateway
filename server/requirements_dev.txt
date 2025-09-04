@@ -11,3 +11,4 @@ python-jose
 python-multipart
 requests
 uvicorn
+redis

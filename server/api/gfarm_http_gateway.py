@@ -32,6 +32,7 @@ import zipfile
 from collections import deque
 import threading
 import stat
+import uuid
 
 from loguru import logger
 
@@ -53,9 +54,12 @@ from fastapi.responses import (PlainTextResponse,
                                FileResponse)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 
 from cryptography.fernet import Fernet
+
+from redis_client import RedisClient
 
 # https://github.com/mpdavis/python-jose/blob/master/jose/jwt.py
 from jose import jwt
@@ -171,7 +175,8 @@ conf_required_keys = [
     "GFARM_HTTP_ASYNC_GFEXPORT",
     "GFARM_HTTP_SESSION_MAX_AGE",
     "GFARM_HTTP_RECURSIVE_MAX_DEPTH",
-    "GFARM_HTTP_TMPDIR"
+    "GFARM_HTTP_TMPDIR",
+    "GFARM_HTTP_TOKEN_STORE"
 ]
 
 # parameters
@@ -244,16 +249,42 @@ ALLOW_ANONYMOUS = str2bool(conf.GFARM_HTTP_ALLOW_ANONYMOUS)
 try:
     SESSION_MAX_AGE = int(conf.GFARM_HTTP_SESSION_MAX_AGE)
 except Exception as e:
-    logger.warning("Invalid value for SESSION_MAX_AGE: " + {str(e)})
+    logger.warning("Invalid value for SESSION_MAX_AGE: " + str(e))
     SESSION_MAX_AGE = 60 * 60 * 24  # 1 day
 
 try:
     RECURSIVE_MAX_DEPTH = int(conf.GFARM_HTTP_RECURSIVE_MAX_DEPTH)
 except Exception as e:
-    logger.warning("Invalid value for SESSION_MAX_AGE: " + {str(e)})
+    logger.warning("Invalid value for SESSION_MAX_AGE: " + str(e))
     RECURSIVE_MAX_DEPTH = 16
 
 TMPDIR = conf.GFARM_HTTP_TMPDIR
+
+TOKEN_STORE = conf.GFARM_HTTP_TOKEN_STORE  # "session" | "database"
+if TOKEN_STORE.lower() == "database":
+    REDIS_HOST = conf.GFARM_HTTP_REDIS_HOST
+    REDIS_PORT = int(conf.GFARM_HTTP_REDIS_PORT)
+    REDIS_DB = int(conf.GFARM_HTTP_REDIS_DB)
+    REDIS_SSL = str2bool(conf.GFARM_HTTP_REDIS_SSL)
+    REDIS_SSL_CERTFILE = conf.GFARM_HTTP_REDIS_SSL_CERTFILE
+    REDIS_SSL_KEYFILE = conf.GFARM_HTTP_REDIS_SSL_KEYFILE
+    REDIS_SSL_CA_CERTS = conf.GFARM_HTTP_REDIS_SSL_CA_CERTS
+    REDIS_ID_PREFIX = conf.GFARM_HTTP_REDIS_ID_PREFIX
+    try:
+        REDIS_TTL = int(conf.GFARM_HTTP_REDIS_TTL)  # seconds
+    except Exception as e:
+        logger.warning("Invalid value for TOKEN_TTL_MARGIN: " + str(e))
+        REDIS_TTL = SESSION_MAX_AGE
+else:
+    REDIS_HOST = None
+    REDIS_PORT = None
+    REDIS_DB = None
+    REDIS_SSL = False
+    REDIS_SSL_CERTFILE = None
+    REDIS_SSL_KEYFILE = None
+    REDIS_SSL_CA_CERTS = None
+    REDIS_ID_PREFIX = None
+    REDIS_TTL = 0
 
 
 def conf_check_not_recommended():
@@ -431,7 +462,28 @@ def manage_tempfiles():
 manage_tempfiles()
 
 #############################################################################
-app = FastAPI()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load
+    if TOKEN_STORE.lower() == "database":
+        app.state.redis = RedisClient(host=REDIS_HOST,
+                                      port=REDIS_PORT,
+                                      db=REDIS_DB,
+                                      decode_responses=False,
+                                      ssl_enable=REDIS_SSL,
+                                      ssl_certfile=REDIS_SSL_CERTFILE,
+                                      ssl_keyfile=REDIS_SSL_KEYFILE,
+                                      ssl_ca_certs=REDIS_SSL_CA_CERTS)
+        await app.state.redis.connect()
+    yield
+    # Clean
+    if hasattr(app.state, "redis"):
+        await app.state.redis.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 api_path = os.path.abspath(__file__)
 api_dir = os.path.dirname(api_path)
@@ -538,42 +590,105 @@ else:
     decompress_str = decompress_str_gzip
 
 
-def encrypt_token(token):
+def encrypt_json(data):
     # dict -> JSON str
-    s = json.dumps(token)
+    s = json.dumps(data)
     # JSON str -> JSON bin (compressed)
     cb = compress_str(s)
     # JSON bin (compressed) -> encrypted bin
     eb = fer.encrypt(cb)
     # encrypted bin -> base85 str
-    encrypted_token = base64.b85encode(eb).decode()
+    encrypted = base64.b85encode(eb).decode()
     logger.debug(f"encrypt_token: str_len={len(s)},"
-                 f" encrypted_len={len(encrypted_token)}")
-    return encrypted_token
+                 f" encrypted_len={len(encrypted)}")
+    return encrypted
 
 
-def decrypt_token(request, encrypted_token):
+def decrypt_json(data):
     try:
         # base85 str -> encrypted bin
-        eb = base64.b85decode(encrypted_token)
+        eb = base64.b85decode(data)
         # encrypted bin -> JSON bin (compressed)
         cb = fer.decrypt(eb)
         # JSON bin (compressed) -> JSON str
         s = decompress_str(cb)
         # JSON str -> dict
+        decrypted = json.loads(s)
+        return decrypted
+    except Exception:
+        raise
+
+
+async def encrypt_token(token, request):
+    if TOKEN_STORE.lower() == "database":
+        session_ref = request.session.get("token")
+        if session_ref:
+            try:
+                session_ref = decrypt_json(session_ref)
+            except Exception as e:
+                ipaddr = get_client_ip_from_request(request)
+                logger.warning(f"{ipaddr}:0 decrypt_token error=" + str(e))
+                session_ref = None
+
+        if not (isinstance(session_ref, dict)
+                and "ID" in session_ref and "Key" in session_ref):
+            session_ref = {"ID": REDIS_ID_PREFIX + uuid.uuid4().hex,
+                           "Key": Fernet.generate_key().decode()}
+
+        token_id = session_ref["ID"]
+        f_session = Fernet(session_ref["Key"].encode())
+
+        s = json.dumps(token)
+        cb = compress_str(s)
+        eb = f_session.encrypt(cb)
+
+        store = request.app.state.redis
+        if REDIS_TTL:
+            await store.setex(token_id, REDIS_TTL, eb)
+        else:
+            await store.set(token_id, eb)
+        set_data = session_ref
+    else:
+        set_data = token
+
+    if fer:
+        return encrypt_json(set_data)
+    else:
+        return set_data
+
+
+async def decrypt_token(request, encrypted_token):
+    if fer:
+        try:
+            data = decrypt_json(encrypted_token)
+        except Exception as e:
+            ipaddr = get_client_ip_from_request(request)
+            logger.warning(f"{ipaddr}:0 decrypt_token error=" + str(e))
+            return None
+    else:
+        data = encrypted_token
+    if TOKEN_STORE.lower() == "database":
+        # get data by ID
+        token_id = data.get("ID")
+        if token_id is None:
+            return None
+        store = request.app.state.redis
+        eb = await store.get(token_id)
+        if not eb:
+            return None
+        f_session = Fernet(data["Key"].encode())
+        cb = f_session.decrypt(eb)
+        s = decompress_str(cb)
         return json.loads(s)
-    except Exception as e:
-        ipaddr = get_client_ip_from_request(request)
-        logger.warning(f"{ipaddr}:0 decrypt_token error=" + str(e))
-        return None
+    else:
+        return data
 
 
-def set_token(request: Request, token):
+async def set_token(request: Request, token):
     necessary_token = {}
     necessary_token["access_token"] = token.get("access_token")
     necessary_token["refresh_token"] = token.get("refresh_token")
-    if fer:
-        necessary_token = encrypt_token(necessary_token)
+    necessary_token = await encrypt_token(necessary_token, request)
     request.session["token"] = necessary_token
 
 
@@ -613,7 +728,7 @@ async def use_refresh_token(request: Request, token):
         response = await http_post(token_endpoint_url, data)
         response.raise_for_status()
         new_token = response.json()
-        set_token(request, new_token)
+        await set_token(request, new_token)
         return new_token
     except httpx.HTTPError:
         raise
@@ -709,11 +824,10 @@ async def get_token(request: Request):
     token = request.session.get("token")
     if not token:
         return None
-    if fer:
-        token = decrypt_token(request, token)
-        if not token:
-            delete_token(request)
-            return None
+    token = await decrypt_token(request, token)
+    if not token:
+        delete_token(request)
+        return None
     if not await is_expired_token(token):
         return token
     new_token = await use_refresh_token(request, token)
@@ -760,7 +874,7 @@ async def oidc_auth_common(request):
     try:
         token = await provider.authorize_access_token(request)
         delete_user_passwd(request)
-        set_token(request, token)
+        await set_token(request, token)
         access_token = await get_access_token(request)
         user = get_user_from_access_token(access_token)
         log_login(request, user, "access_token")
