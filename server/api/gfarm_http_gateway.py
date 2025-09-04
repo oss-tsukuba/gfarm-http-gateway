@@ -1346,19 +1346,21 @@ async def set_tokenfilepath_to_env(request, env, filepath=None, expire=None):
 
     user = claims.get(TOKEN_USER_CLAIM, None)
     # Create token file
-    if tokenfile is None:
-        tmpdir = f"{TMPDIR}/{user}/" if user is not None else TMPDIR
-        env.pop('GFARM_SASL_PASSWORD', None)
-        os.makedirs(tmpdir, mode=0o700, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-                dir=tmpdir,
-                delete_on_close=False) as fp:
+    tmpdir = f"{TMPDIR}/{user}/" if user is not None else TMPDIR
+    env.pop('GFARM_SASL_PASSWORD', None)
+    os.makedirs(tmpdir, mode=0o700, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+            mode="w",
+            dir=tmpdir,
+            delete_on_close=False) as fp:
+        # Write access_token in the token file
+        fp.write(access_token)
+        if tokenfile is None:
             tokenfile = fp.name
             env['JWT_USER_PATH'] = tokenfile
+        else:
+            os.rename(fp.name, tokenfile)
 
-    # Write access_token in the token file
-    with open(tokenfile, "w") as f:
-        f.write(access_token)
     ipaddr = get_client_ip_from_request(request)
     logger.debug(
         f"{ipaddr}:0 user={user}, access_token file:{tokenfile} updated"
