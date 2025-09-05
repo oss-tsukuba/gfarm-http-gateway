@@ -266,14 +266,25 @@ if TOKEN_STORE.lower() == "database":
     REDIS_PORT = int(conf.GFARM_HTTP_REDIS_PORT)
     REDIS_DB = int(conf.GFARM_HTTP_REDIS_DB)
     REDIS_SSL = str2bool(conf.GFARM_HTTP_REDIS_SSL)
-    REDIS_SSL_CERTFILE = conf.GFARM_HTTP_REDIS_SSL_CERTFILE
-    REDIS_SSL_KEYFILE = conf.GFARM_HTTP_REDIS_SSL_KEYFILE
-    REDIS_SSL_CA_CERTS = conf.GFARM_HTTP_REDIS_SSL_CA_CERTS
-    REDIS_ID_PREFIX = conf.GFARM_HTTP_REDIS_ID_PREFIX
+    try:
+        REDIS_SSL_CERTFILE = conf.GFARM_HTTP_REDIS_SSL_CERTFILE
+    except Exception:
+        REDIS_SSL_CERTFILE = None
+    try:
+        REDIS_SSL_KEYFILE = conf.GFARM_HTTP_REDIS_SSL_KEYFILE
+    except Exception:
+        REDIS_SSL_KEYFILE = None
+    try:
+        REDIS_SSL_CA_CERTS = conf.GFARM_HTTP_REDIS_SSL_CA_CERTS
+    except Exception:
+        REDIS_SSL_CA_CERTS = None
+    try:
+        REDIS_ID_PREFIX = conf.GFARM_HTTP_REDIS_ID_PREFIX
+    except Exception:
+        REDIS_ID_PREFIX = ""
     try:
         REDIS_TTL = int(conf.GFARM_HTTP_REDIS_TTL)  # seconds
-    except Exception as e:
-        logger.warning("Invalid value for TOKEN_TTL_MARGIN: " + str(e))
+    except Exception:
         REDIS_TTL = SESSION_MAX_AGE
 else:
     REDIS_HOST = None

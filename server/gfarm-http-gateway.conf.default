@@ -163,10 +163,10 @@ GFARM_HTTP_TOKEN_USER_CLAIM=sub
 #   value :
 #      session  : tokens are kept in the HTTP session (default)
 #      database : tokens are stored in Database
-GFARM_HTTP_TOKEN_STORE="session"
+GFARM_HTTP_TOKEN_STORE=session
 
 # ========================================
-# Database (Redis) settings
+# Database (Redis)
 # ========================================
 # GFARM_HTTP_REDIS_HOST
 #   Redis server hostname

@@ -30,12 +30,41 @@ services:
       # Required: Nginx config
       - ./nginx/gfarm.conf:/etc/nginx/conf.d/gfarm.conf:ro
       # Required for HTTPS: TLS server certs/keys for Nginx
+      # set to ssl_certificate and ssl_certificate_key in Nginx config
       - ./nginx/certs:/etc/nginx/certs:ro
     networks:
       - gfarm_net
     depends_on:
       - gfarm-http-gateway
     restart: unless-stopped
+
+# redis:
+#   image: redis
+#   command: ["redis-server", "/config/redis.conf"]
+#   volumes:
+#     # Required: Redis configuration
+#     - ./redis/redis.conf:/config/redis.conf:ro
+#     # Optional: TLS/mTLS certificates directory
+#     # Expected files:
+#     #   - ca.crt            : CA certificate that signed redis.crt (and client certs for mTLS)
+#     #   - redis.crt/.key    : Server certificate/key for Redis (SAN should include "redis")
+#     #   - client.crt/.key   : (Optional, mTLS) Client certificate/key used by the gateway
+#     # If you are NOT using TLS, you can remove this mount and adjust healthcheck accordingly.
+#     - ./redis/certs:/certs:ro
+#     # Optional: Persistent data directory.
+#     # If you want to keep data, uncomment the next line and the top-level 'volumes: redis-data:' block.
+#     # - redis-data:/data
+#   healthcheck:
+#     test: ["CMD", "redis-cli", "--tls", "--cacert", "/certs/ca.crt", "PING"]
+#     # test: ["CMD", "redis-cli", "PING"] # for plain
+#     interval: 10s
+#     timeout: 3s
+#     retries: 20
+#   networks: [gfarm_net]
+#   restart: unless-stopped
+
+# volumes:
+#   redis-data:
 
 networks:
   gfarm_net:
