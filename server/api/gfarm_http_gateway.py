@@ -1366,7 +1366,7 @@ async def set_tokenfilepath_to_env(request, env, filepath=None, expire=None):
     with tempfile.NamedTemporaryFile(
             mode="w",
             dir=tmpdir,
-            delete_on_close=False) as fp:
+            delete=False) as fp:
         # Write access_token in the token file
         fp.write(access_token)
         if tokenfile is None:
