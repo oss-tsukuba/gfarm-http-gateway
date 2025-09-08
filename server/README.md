@@ -9,8 +9,8 @@ To run gfarm-http-gateway, you need:
 
 ## Configuration variables
 
-`gfarm-http-gateway.conf` is required to run the gateway.
-Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default). 
+`gfarm-http-gateway.conf` is required to run the gateway.  
+Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default).  
 
 The configuration file is organized into the following sections:
 
@@ -20,7 +20,7 @@ The configuration file is organized into the following sections:
 - **OpenID Connect** - OIDC and Keycloak settings  
 - **Tokens** - Token verification and validation
 - **Database (Redis)** - Token persistence using Redis
-  - optional, required only when GFARM_HTTP_TOKEN_STORE=database
+  - optional; required only when GFARM_HTTP_TOKEN_STORE=database
 - **Performance** - Performance-related settings
 - **Development & Debug** - Debug settings (keep defaults for production)
 
@@ -257,8 +257,8 @@ docker compose -f docker-compose-for-HPCI.yaml down
 
 ## Using Redis as the Token Store (with Docker Compose)
 
-This section describes how to enable **Redis** as the Token Backend.
-By default, **gfarm-http-gateway** stores tokens in the HTTP session.
+This section shows an **example configuration** for enabling Redis as the Token Store.  
+By default, gfarm-http-gateway stores tokens in the HTTP session.  
 
 If the IdP enforces **refresh token rotation (non-reusable refresh tokens)**, then a long-running `gfptar` execution may require the user to re-login when the refresh token expires.
 By enabling **Redis as the Token Store**, the gateway can automatically refresh and update tokens during `gfptar` execution, so the user does not need to re-login.
@@ -471,144 +471,259 @@ docker compose up -d
 - GNU Make
 - Node.js v22 or later
 
-#### Setup environment
+#### Set up the environment
 
 - **Gfarm server environment**
-  - in `$(pkg-config --variable=libdir libsasl2)/sasl2/gfarm.conf` of servers
-    - `mech_list: XOAUTH2`
-  - SEE ALSO: <http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html>
+  Configure SASL XOAUTH2 on the server side. In
+  `$(pkg-config --variable=libdir libsasl2)/sasl2/gfarm.conf`:
+
+  - `mech_list: XOAUTH2`
+    See also: [http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html](http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html)
+
 - **Gfarm client environment**
-  - gf* commands and gfarm2.conf is required
-  - in `~/.gfarm2rc` (or `<prefix>/etc/gfarm2.conf`) of clients
-    - `auth enable sasl` (or `sasl_auth`)
-    - `auth disable <all other methods>`
-    - DO NOT set `sasl_mechanisms <...>`
-    - DO NOT set `sasl_user <...>`
+  Make sure `gf*` commands and `gfarm2.conf` are available.
+  In `~/.gfarm2rc` (or `<prefix>/etc/gfarm2.conf`):
+
+  - `auth enable sasl` (or `sasl_auth`)
+  - `auth disable <all other methods>`
+  - **Do not** set `sasl_mechanisms` or `sasl_user` manually.
+
 - **gfarm-http-gateway requirements**
-  - (For Ubuntu 24.04 or RHEL(8,9) family)
-    - Run `make setup`
-    - To install Python and Node.js via system packages (requires curl): run `make setup-with-sys-packages`
-  - (For other environments)
-    - Refer to `setup.sh` and install the listed packages manually.
-  - (When using Pyenv python3 instead of system python3)
-    - install and setup Pyenv: <https://github.com/pyenv/pyenv>
-    - (ex.) `pyenv install -v 3.12`
-    - `cd gfarm-http-gateway`
-    - `make clear-venv`
-    - (ex.) `pyenv local 3.12`
-    - `make setup` or `make setup-latest`
+
+  - On **Ubuntu 24.04 or RHEL (8, 9)**:
+
+    - Run `make setup` (runs `setup.sh` with `INSTALL_SYS_PACKAGES=0`) to create a Python venv and install Python/Node.js dependencies.
+    - Run `make setup-with-sys-packages` (runs `setup.sh` with `INSTALL_SYS_PACKAGES=1`) if you also want to install required **system packages** (Python, Node.js) automatically.
+  - On **other environments**:
+
+    - Refer to `setup.sh` for the full list of required packages and install them manually.
+  - When using **Pyenv** instead of the system Python:
+
+    - Install and configure Pyenv ([https://github.com/pyenv/pyenv](https://github.com/pyenv/pyenv))
+    - Example:
+
+      ```bash
+      pyenv install -v 3.12
+      cd gfarm-http-gateway
+      make clear-venv
+      pyenv local 3.12
+      make setup   # or make setup-latest
+      ```
+
 - **OpenID Connect provider**
-  - client ID and client secret
-  - valid redirect URI
-  - logout redirect URI (optional)
+  Prepare the following values from your IdP (e.g., Keycloak):
+
+  - Client ID and client secret
+  - Valid redirect URI
+  - Logout redirect URI (optional)
 
 #### Prepare Configuration
 
 See **Configuration variables**
 
-### Start server
+### Start the server
 
-#### Start for clients on localhost (127.0.0.1)
+#### Localhost only (127.0.0.1)
 
-- `./bin/gfarm-http-gateway.sh`
-- For production use, it is recommended to use this with a reverse proxy.
+Run the gateway for local testing on your own machine:
 
-#### Start for clients of any hosts
+```bash
+./bin/gfarm-http-gateway.sh
+```
 
-- (not for production use)
-- `./bin/gfarm-http-gateway.sh --host 0.0.0.0 --port 8000`
+- Accessible only from `localhost`.
+- For production, run behind a reverse proxy (e.g., NGINX) with HTTPS.
 
-#### Start for developer
+> Note: `gfarm-http-gateway.sh` is a wrapper around **Uvicorn** to launch the FastAPI app (`gfarm_http_gateway:app`).  
+> This script:  
+> - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app entrypoint).
+> - Cleans up temporary files in `$GFARM_HTTP_TMPDIR` before starting.
+> - Changes to the project root directory.
+> - Runs Uvicorn with `--proxy-headers` and forwards any extra arguments.
 
-- (install GNU make)
-- `make test` to run test
-- `./bin/gfarm-http-gateway-dev.sh --port 8000 --log-level debug`
-  - for clients of any hosts (0.0.0.0:8000)
-  - high load average
+#### Accessible from any host (0.0.0.0)
+
+Expose the gateway to all network interfaces:
+
+```bash
+./bin/gfarm-http-gateway.sh --host 0.0.0.0 --port 8000
+```
+
+- Useful for quick experiments or testing across machines.
+- **Not recommended for production** (unencrypted HTTP access to everyone).
+
+#### Developer mode
+
+Run the gateway with developer settings:
+
+```bash
+make test             # run automated tests
+./bin/gfarm-http-gateway-dev.sh --port 8000
+```
+
+- Enables debug logging.
+- Listens on all interfaces (`0.0.0.0:8000`).
+- May cause high CPU load (auto-reload, detailed logs).
+- Intended for development only.
+
+> Note: `gfarm-http-gateway-dev.sh` is a wrapper around **Uvicorn** to launch the FastAPI app > (`gfarm_http_gateway:app`) in **developer mode**.  
+> This script:  
+> - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app > entrypoint).
+> - Runs with `--reload` enabled for automatic code reloading.
+> - Sets log level to **debug** for detailed output.
+> - Binds to all interfaces (`--host 0.0.0.0`).
+> - Uses `--proxy-headers` and forwards any extra arguments.
 
 ### Systemd
 
-- Copy this gfarm-http-gateway (source tree) to any directory
-  - Ex.: /opt/gfarm-http-gateway
-- `sudo cp gfarm-http.service /etc/systemd/system/`
-  - `gfarm-http.service` is an example file
-- Edit `/etc/systemd/system/gfarm-http.service` for your environment
-- `sudo systemctl daemon-reload`
-- `sudo systemctl enable gfarm-http`
-- `sudo systemctl start gfarm-http`
-- `sudo systemctl status gfarm-http`
+You can run the gateway as a **systemd service** for automatic startup and easier management.
+
+1. Copy the source tree to a suitable location (e.g., `/opt`):
+
+   ```bash
+   cp -r gfarm-http-gateway/server /opt/gfarm-http-gateway
+   ```
+
+2. Copy the provided example service file:
+
+   ```bash
+   sudo cp gfarm-http.service /etc/systemd/system/
+   ```
+
+3. Edit `/etc/systemd/system/gfarm-http.service` to match your environment.
+
+4. Reload systemd so it recognizes the new service:
+
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+
+5. Enable the service to start automatically on boot:
+
+   ```bash
+   sudo systemctl enable gfarm-http
+   ```
+
+6. Start the service now:
+
+   ```bash
+   sudo systemctl start gfarm-http
+   ```
+
+7. Check the status and logs:
+
+   ```bash
+   sudo systemctl status gfarm-http
+   ```
 
 
 ## Logging
 
-- To change log level: --log-level
+### Change log level
+  Use the `--log-level` option when starting the gateway:
+
+  ```bash
+  ./bin/gfarm-http-gateway.sh --log-level info
+  ```
+
+  Available levels: `critical`, `error`, `warning`, `info`, `debug`, `trace`
+
   - See `venv/bin/uvicorn --help`
-  - See: <https://www.uvicorn.org/settings/#logging>
-- To change the log format
-  - use LOGURU_FORMAT environment variable
-    - cannot be specified in a configuration file
-  - Ex.: `LOGURU_FORMAT="<level>{level}</level>: <level>{message}</level>"`
-  - default: LOGURU_FORMAT from loguru._defaults
-    - <https://github.com/Delgan/loguru/blob/master/loguru/_defaults.py>
+  - See: [https://www.uvicorn.org/settings/#logging](https://www.uvicorn.org/settings/#logging)
+
+### Change log format
+  Set the `LOGURU_FORMAT` environment variable before starting the server.
+
+  ```bash
+  LOGURU_FORMAT="<level>{level}</level>: <level>{message}</level>" ./bin/gfarm-http-gateway.sh
+  ```
+
+  - Cannot be specified in the configuration file.
+  - Defaults are defined in [loguru/\_defaults.py](https://github.com/Delgan/loguru/blob/master/loguru/_defaults.py).
 
 
 ## API Documentation
 
-- Swagger (auto-generated by FastAPI)
-  - <http://(hostname:port)/docs>
+The gateway provides interactive API documentation via **Swagger UI**, auto-generated by FastAPI.
+
+- Open in a browser at:
+
+  ```
+  http://<hostname>:<port>/docs
+  ```
 
 
 ## Development
 
 ### Development environment in gfarm/docker/dist
 
-- set up gfarm/docker/dist (refer to (gfarm source)/docker/dist/README.md)
-  - set up `Explore on virtual clusters`
-  - set up `For OAuth authentication`
-  - set up `Use http proxy` (squid container)
-- clone(git clone) gfarm-http-gateway repository to (gfarm source)/gfarm-http-gateway
-- `make`
-  - login to c1 container
-- `ssh c2`
-- (in c2 container)
-- `cd ~/gfarm/gfarm-http-gateway/server`
-- `make setup-latest-with-sys-packages`
-- `bin/gfarm-http-gateway-dev-for-docker-dist.sh  --port 8000 --log-level debug` to launch the gateway
-- (Optional) in c3 container, launch the gateway using the same procedure described above
-- refer to `Keycloak on gfarm/docker/dist (developer setup)` for configuration details
-- use the http proxy (squid) for c2, c3, keycloak and jwt-server for a web browser
-- open <https://jwt-server/> in a web browser
-- copy the command line of jwt-agent and start jwt-agent in c1 container
-  - input the passphrase from jwt-server
-- setup [gfarm-http Client](../client)
-- `gfmkdir -m 1777 /tmp`
-- `export GFARM_HTTP_URL=http://c2:8000`
-- `make test-client`
-- `make test-unit`
-- open <http://c2:8000/> in a web browser
-  - auto-redirect to <http://keycloak>
-  - login: `user1/PASSWORD`
-  - This page contains examples of API usage
+You can build and test the gateway inside the **gfarm/docker/dist** developer environment.
 
-#### Keycloak on gfarm/docker/dist (developer setup)
+1. **Set up gfarm/docker/dist**
+   Follow `(gfarm source)/docker/dist/README.md` and configure:
 
-This section shows how to configure **Keycloak** as an OpenID Connect provider in the gfarm/docker/dist environment.  
-It is intended as a development example only.
+   - `Explore on virtual clusters`
+   - `For OAuth authentication`
+     - `Use http proxy instead of remote desktop` (squid container)
 
-1. Open the Keycloak admin console in a web browser:  
-   - `https://keycloak:8443/auth/admin/master/console/#/HPCI/`  
-   - Login with `admin/admin`
+2. **Clone this repository into the gfarm source tree**
 
-2. In the **HPCI** realm, an example client `hpci-pub` is already created.  
-   Edit it and configure:
-   - **Valid redirect URIs** → add entries such as:
-     - `http://c2:8000/*`
-     - `http://c2/*`
-   - **Valid post logout redirect URIs** → add entries such as:
-     - `http://c2:8000/*`
-     - `http://c2/*`
+   ```bash
+   cd (gfarm source)
+   git clone https://github.com/oss-tsukuba/gfarm-http-gateway.git
+   ```
 
-3. Save your changes.
+3. **Log in to the cluster**
+
+   ```bash
+   make     # log in to the c1 container
+   ssh c2   # move into the c2 container
+   ```
+
+4. **Install dependencies in c2**
+
+   ```bash
+   cd ~/gfarm/gfarm-http-gateway/server
+   make setup-latest-with-sys-packages
+   ```
+
+5. **Launch the gateway in c2**
+
+   ```bash
+   bin/gfarm-http-gateway-dev-for-docker-dist.sh --port 8000
+   ```
+
+   - Running this command starts the gateway in **developer mode** (debug logging, auto reload).
+   - Optionally, repeat steps 4-5 in **c3** if you want another gateway instance.
+
+6. **Configure authentication**
+
+   - Open the Keycloak admin console: `https://keycloak:8443/auth/admin/master/console/#/HPCI/`
+     (login with `admin/admin`).
+   - In the **HPCI** realm, edit the example client `hpci-pub`.
+   - Add redirect URIs:
+       - `http://c2:8000/*`
+       - `http://c2/*`
+   - Add post logout redirect URIs:
+       - `http://c2:8000/*`
+       - `http://c2/*`
+   - Save the changes.
+
+7. **Access the Web UI**
+   
+   - Open [http://c2:8000/](http://c2:8000/) in a browser.
+   - You will be redirected to [http://keycloak](http://keycloak) for login.
+   - Example login: `user1 / PASSWORD`.
+   - The landing page includes API usage examples.
+
+### Run tests
+
+- `make test-all` - run all available tests (server + client).
+  -  Requires the client to be built first (`cd ../client && make`).
+- `make test` - run the following tests:
+  - `make test-unit` - run API unit tests with pytest.
+  - `make test-flake8` - run style checks with flake8.
+  - `make test-playwright` - run Web UI end-to-end tests with Playwright (must be installed).
 
 ### To freeze python packages
 
