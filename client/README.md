@@ -75,47 +75,47 @@ gfarm-http [global-options] <command> [command-options] [args]
 
 ### Supported commands
 
-* `ls [options] <Gfarm-path>`
-  * `-a` - do not hide entries starting with '.'
-  * `-e` - display effective permissions  
-  * `-l` - list in long format
-  * `-T` - with -l option, show complete date format
-  * `-R` - recursively list subdirectories
-  * `-j` - output with json format
-* `download <Gfarm-path> <Local-path>`
-* `zipdownload [-o output] <Gfarm-paths>...`
-  * `-o output` - output zip file ("-" for stdout, default: "-")
-* `upload <Local-path> <Gfarm-path>`
-* `rm [options] <Gfarm-path>`
-  * `-f` - ignore nonexistent files, never prompt
-  * `-r` - remove directories and contents recursively
-* `mkdir [options] <Gfarm-path>`
-  * `-p` - create parent directories if needed
-* `rmdir <Gfarm-path>`
-* `mv <src> <dest>`
-* `stat [options] <Gfarm-path>`
-  * `-C` - show checksum
-  * `-l` - show symlink info, don't follow links
-* `chmod <mode> <Gfarm-path>`
-* `copy <src-Gfarm-path> <dest-Gfarm-path>`
-* `ln [options] <target-Gfarm-path> <linkname-Gfarm-path>`
-  * `-s` - create symbolic link
-* `tar <command> [options] [args]`
+- `ls [options] <Gfarm-path>`
+  - `-a` - do not hide entries starting with '.'
+  - `-e` - display effective permissions  
+  - `-l` - list in long format
+  - `-T` - with -l option, show complete date format
+  - `-R` - recursively list subdirectories
+  - `-j` - output with json format
+- `download <Gfarm-path> <Local-path>`
+- `zipdownload [-o output] <Gfarm-paths>...`
+  - `-o output` - output zip file ("-" for stdout, default: "-")
+- `upload <Local-path> <Gfarm-path>`
+- `rm [options] <Gfarm-path>`
+  - `-f` - ignore nonexistent files, never prompt
+  - `-r` - remove directories and contents recursively
+- `mkdir [options] <Gfarm-path>`
+  - `-p` - create parent directories if needed
+- `rmdir <Gfarm-path>`
+- `mv <src> <dest>`
+- `stat [options] <Gfarm-path>`
+  - `-C` - show checksum
+  - `-l` - show symlink info, don't follow links
+- `chmod <mode> <Gfarm-path>`
+- `copy <src-Gfarm-path> <dest-Gfarm-path>`
+- `ln [options] <target-Gfarm-path> <linkname-Gfarm-path>`
+  - `-s` - create symbolic link
+- `tar <command> [options] [args]`
   > Note: This command is supported only for Gfarm paths (gfarm:/ to gfarm:/); local paths are not supported.
-  * `-c OUTDIR -C DIR MEMBER...` - create tar files in OUTDIR from DIR/MEMBERs
-  * `-r OUTDIR -C DIR MEMBER...` - append files to new tar files  
-  * `-u OUTDIR -C DIR MEMBER...` - append only newer files to new tar files
-  * `-x OUTDIR INDIR MEMBER...` - extract entries from INDIR to OUTDIR
-  * `-t DIR` - list members of DIR
-* `getfacl <Gfarm-path>`
-* `setfacl [options] <Gfarm-path>`
-  * `-M FILE` - read ACL entries from FILE ("-" for stdin)
-* `gfuser [options]`
-  * `-l` - long format
-* `gfgroup [options]`  
-  * `-l` - long format
-* `whoami`
-* `userinfo`
+  - `-c OUTDIR -C DIR MEMBER...` - create tar files in OUTDIR from DIR/MEMBERs
+  - `-r OUTDIR -C DIR MEMBER...` - append files to new tar files  
+  - `-u OUTDIR -C DIR MEMBER...` - append only newer files to new tar files
+  - `-x OUTDIR INDIR MEMBER...` - extract entries from INDIR to OUTDIR
+  - `-t DIR` - list members of DIR
+- `getfacl <Gfarm-path>`
+- `setfacl [options] <Gfarm-path>`
+  - `-M FILE` - read ACL entries from FILE ("-" for stdin)
+- `gfuser [options]`
+  - `-l` - long format
+- `gfgroup [options]`  
+  - `-l` - long format
+- `whoami`
+- `userinfo`
 
 ### Examples
 
@@ -170,23 +170,37 @@ Enable verbose output for troubleshooting:
 gfarm-http -v ls /tmp
 ```
 
+### Test
+
+Ensure a temporary directory exists in Gfarm (required).  
+If it does not exist, create it:
+```bash
+gfmkdir -m 1777 /tmp
+```
+
+Run the tests:
+
+```bash
+make test
+```
+
 ## jwt-curl
 
 Wrapper around `curl` that automatically attaches an access token from `jwt-agent`.
 
 ### Commands
 
-* `jwt-curl [curl options]`
+- `jwt-curl [curl options]`
 
-  * Adds `Authorization: Bearer <token>` header automatically
-  * Environment variables (optional):
+  - Adds `Authorization: Bearer <token>` header automatically
+  - Environment variables (optional):
 
-    * `JWT_USER_PATH` — Path to JWT file
-    * `GFARM_SASL_USER` — Username (`anonymous` disables Authorization header)
-    * `GFARM_SASL_PASSWORD` — Password (for SASL PLAIN/LOGIN)
-* `jwt-curl-upload local_file URL [curl options]`
+    - `JWT_USER_PATH` - Path to JWT file
+    - `GFARM_SASL_USER` - Username (`anonymous` disables Authorization header)
+    - `GFARM_SASL_PASSWORD` - Password (for SASL PLAIN/LOGIN)
+- `jwt-curl-upload local_file URL [curl options]`
 
-  * Convenience wrapper for file uploads
+  - Convenience wrapper for file uploads
 
 ### Examples
 
