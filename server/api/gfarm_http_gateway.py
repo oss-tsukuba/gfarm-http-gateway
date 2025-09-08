@@ -259,6 +259,8 @@ except Exception as e:
     RECURSIVE_MAX_DEPTH = 16
 
 TMPDIR = conf.GFARM_HTTP_TMPDIR
+TMPDIR_TOKENS = os.path.join(TMPDIR, "tokens")
+TMPDIR_TARTMP = os.path.join(TMPDIR, "tartmp")
 
 TOKEN_STORE = conf.GFARM_HTTP_TOKEN_STORE  # "session" | "database"
 if TOKEN_STORE.lower() == "database":
@@ -465,8 +467,9 @@ def check_tempdir_mode():
 def manage_tempfiles():
     if os.path.exists(TMPDIR):
         check_tempdir_mode()
-        shutil.rmtree(TMPDIR)
-    os.makedirs(TMPDIR, mode=0o700)
+
+    os.makedirs(TMPDIR_TOKENS, mode=0o700, exist_ok=True)
+    os.makedirs(TMPDIR_TARTMP, mode=0o700, exist_ok=True)
     check_tempdir_mode()
 
 
@@ -1357,7 +1360,7 @@ async def set_tokenfilepath_to_env(request, env, filepath=None, expire=None):
 
     user = claims.get(TOKEN_USER_CLAIM, None)
     # Create token file
-    tmpdir = f"{TMPDIR}/{user}/" if user is not None else TMPDIR
+    tmpdir = f"{TMPDIR_TOKENS}/{user}/" if user is not None else TMPDIR_TOKENS
     env.pop('GFARM_SASL_PASSWORD', None)
     os.makedirs(tmpdir, mode=0o700, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -2031,6 +2034,7 @@ async def gfptar(env,
     args = []
     if options:
         args.extend(options)
+    args.append(f"--workdir={TMPDIR_TARTMP}")
 
     if cmd == "x":
         args.extend([f"-{cmd}", outdir, basedir])
