@@ -27,7 +27,6 @@ from typing import (
 import urllib
 import re
 import tempfile
-import shutil
 import zipfile
 from collections import deque
 import threading
@@ -467,6 +466,8 @@ def check_tempdir_mode():
 def manage_tempfiles():
     if os.path.exists(TMPDIR):
         check_tempdir_mode()
+    else:
+        os.makedirs(TMPDIR, mode=0o700, exist_ok=True)
 
     os.makedirs(TMPDIR_TOKENS, mode=0o700, exist_ok=True)
     os.makedirs(TMPDIR_TARTMP, mode=0o700, exist_ok=True)
