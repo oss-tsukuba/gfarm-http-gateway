@@ -22,6 +22,8 @@ class RedisClient:
                  ssl_certfile: Optional[str] = None,
                  ssl_keyfile: Optional[str] = None,
                  ssl_ca_certs: Optional[str] = None,
+                 username: Optional[str] = None,
+                 password: Optional[str] = None,
                  lock_prefix: str = "LOCK"):
         self._host = host
         self._port = port
@@ -31,6 +33,8 @@ class RedisClient:
         self._ssl_certfile = ssl_certfile
         self._ssl_keyfile = ssl_keyfile
         self._ssl_ca_certs = ssl_ca_certs
+        self._username = username
+        self._password = password
         self._client: Optional[Redis] = None
         self.lock_prefix = lock_prefix
 
@@ -43,7 +47,10 @@ class RedisClient:
                 ssl=self._ssl,
                 ssl_certfile=self._ssl_certfile,
                 ssl_keyfile=self._ssl_keyfile,
-                ssl_ca_certs=self._ssl_ca_certs
+                ssl_ca_certs=self._ssl_ca_certs,
+                username=self._username,
+                password=self._password,
+                decode_responses=self._decode
             )
         return self._client
 

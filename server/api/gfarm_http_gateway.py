@@ -279,6 +279,14 @@ if TOKEN_STORE.lower() == "database":
         REDIS_SSL_CA_CERTS = conf.GFARM_HTTP_REDIS_SSL_CA_CERTS
     except Exception:
         REDIS_SSL_CA_CERTS = None
+    try:
+        REDIS_USERNAME = conf.GFARM_HTTP_REDIS_USERNAME
+    except Exception:
+        REDIS_USERNAME = None
+    try:
+        REDIS_PASSWORD = conf.GFARM_HTTP_REDIS_PASSWORD
+    except Exception:
+        REDIS_PASSWORD = None
 else:
     REDIS_HOST = None
     REDIS_PORT = None
@@ -287,6 +295,8 @@ else:
     REDIS_SSL_CERTFILE = None
     REDIS_SSL_KEYFILE = None
     REDIS_SSL_CA_CERTS = None
+    REDIS_USERNAME = None
+    REDIS_PASSWORD = None
     REDIS_TTL = 0
 try:
     REDIS_ID_PREFIX = conf.GFARM_HTTP_REDIS_ID_PREFIX
@@ -501,7 +511,9 @@ async def lifespan(app: FastAPI):
                                       ssl_enable=REDIS_SSL,
                                       ssl_certfile=REDIS_SSL_CERTFILE,
                                       ssl_keyfile=REDIS_SSL_KEYFILE,
-                                      ssl_ca_certs=REDIS_SSL_CA_CERTS)
+                                      ssl_ca_certs=REDIS_SSL_CA_CERTS,
+                                      username=REDIS_USERNAME,
+                                      password=REDIS_PASSWORD)
         await app.state.redis.connect()
     yield
     # Clean
