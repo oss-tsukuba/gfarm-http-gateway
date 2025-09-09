@@ -220,6 +220,32 @@ GFARM_HTTP_REDIS_ID_PREFIX=
 #   ex.: GFARM_HTTP_REDIS_TTL=86400
 GFARM_HTTP_REDIS_TTL=86400
 
+# GFARM_HTTP_REDIS_USERNAME
+#   username for Redis ACL-based authentication
+#   leave empty if not required
+GFARM_HTTP_REDIS_USERNAME=
+
+# GFARM_HTTP_REDIS_PASSWORD
+#   password for Redis authentication (requirepass or ACL)
+#   leave empty if not required
+GFARM_HTTP_REDIS_PASSWORD=
+
+# GFARM_HTTP_REDIS_LOCK_TTL
+#   lock expiration time (in seconds)
+#   the lock will be released automatically after this period
+#   default: 5
+GFARM_HTTP_REDIS_LOCK_TTL=5
+
+# GFARM_HTTP_REDIS_LOCK_RETRY_COUNT
+#   number of times to retry acquiring a lock before failing
+#   default: 10
+GFARM_HTTP_REDIS_LOCK_RETRY_COUNT=10
+
+# GFARM_HTTP_REDIS_LOCK_INTERVAL
+#   wait interval (in seconds, float allowed) between retries
+#   default: 1.0
+GFARM_HTTP_REDIS_LOCK_INTERVAL=1.0
+
 # ========================================
 # Performance
 # ========================================

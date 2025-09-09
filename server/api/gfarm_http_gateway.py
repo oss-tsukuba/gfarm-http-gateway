@@ -309,15 +309,15 @@ except Exception:
 try:
     REDIS_LOCK_TTL = int(conf.GFARM_HTTP_REDIS_LOCK_TTL)  # seconds
 except Exception:
-    REDIS_LOCK_TTL = 10
+    REDIS_LOCK_TTL = 5
 try:
     REDIS_LOCK_RETRY_COUNT = int(conf.GFARM_HTTP_REDIS_LOCK_RETRY_COUNT)
 except Exception:
-    REDIS_LOCK_RETRY_COUNT = 3
+    REDIS_LOCK_RETRY_COUNT = 10
 try:
     REDIS_LOCK_INTERVAL = float(conf.GFARM_HTTP_REDIS_LOCK_INTERVAL)  # seconds
 except Exception:
-    REDIS_LOCK_INTERVAL = 0.5
+    REDIS_LOCK_INTERVAL = 1.0
 
 
 def conf_check_not_recommended():
