@@ -725,7 +725,7 @@ async def http_get(url):
 
 async def acquire_lock_db(token_id: str):
     if not token_id:
-        raise RuntimeError("acquire_lock token_id empty")
+        raise RuntimeError("Redis lock failed: token_id is empty")
     store = app.state.redis
     res, val = await store.acquire_lock(key=token_id,
                                         ttl=REDIS_LOCK_TTL,
@@ -733,7 +733,8 @@ async def acquire_lock_db(token_id: str):
                                         retry_interval=REDIS_LOCK_INTERVAL)
     if res:
         return val
-    raise RuntimeError(f"acquire_lock retry over: {token_id}")
+    raise RuntimeError("Redis lock acquisition failed after retries "
+                       f"(token_id={token_id})")
 
 
 async def release_lock_db(token_id: str, val: str):
@@ -749,7 +750,8 @@ async def get_rt_from_db(session_ref):
         return None
     token_key = session_ref.get("key")
     if token_key is None:
-        raise
+        raise RuntimeError("Redis fetch failed: "
+                           "session_ref does not contain 'token_key'")
     store = app.state.redis
     eb = await store.get(token_id)
     if not eb:
@@ -823,9 +825,8 @@ async def oidc_jwks():
         return jwks_cache
 
 
-async def verify_token(token, use_raise=False):
+async def verify_token(access_token, use_raise=False):
     try:
-        access_token = token.get("access_token")
         jwks = await oidc_jwks()
         # if DEBUG:
         #     logger.debug("jwks=\n" + pf(jwks))
@@ -857,7 +858,8 @@ async def verify_token(token, use_raise=False):
 
 async def is_expired_token(token, use_raise=False):
     if TOKEN_VERIFY:
-        claims = await verify_token(token, use_raise)
+        access_token = token.get("access_token")
+        claims = await verify_token(access_token, use_raise)
         if not claims:
             return True  # expired
         exp = claims.get("exp")
@@ -892,8 +894,9 @@ async def get_token(request: Request):
     if not await is_expired_token(token):
         return token
     new_token = await use_refresh_token(request, token)
-    if not await is_expired_token(new_token, use_raise=True):
-        return new_token
+    if new_token:
+        if not await is_expired_token(new_token, use_raise=True):
+            return new_token
     delete_token(request)
     return None  # not login
 
@@ -947,9 +950,7 @@ async def oidc_auth_common(request):
 
 
 async def login_check(request: Request,
-                      error: str = "",
-                      session_state: str = None,
-                      code: str = None):
+                      error: str = ""):
     login_ok = False
     sasl_username = ""
     try:
@@ -963,7 +964,7 @@ async def login_check(request: Request,
     if access_token is None and error == "":
         user_passwd = get_user_passwd(request)
         if user_passwd:
-            user, passwd = user_passwd
+            user, _ = user_passwd
             login_ok = True
             sasl_username = user
 
@@ -978,8 +979,7 @@ async def index(request: Request,
     if session_state is not None and code is not None:
         return await oidc_auth_common(request)
 
-    _, _, _, error = await login_check(
-        request, error, session_state, code)
+    _, _, _, error = await login_check(request, error)
 
     if error != "":
         request.session["error"] = error
@@ -992,8 +992,7 @@ async def debug_page(request: Request,
                      error: str = "",
                      session_state: str = None,
                      code: str = None):
-    login_ok, access_token, sasl_username, error = await login_check(
-        request, session_state, code)
+    login_ok, access_token, sasl_username, error = await login_check(request)
 
     if error != "":
         request.session["error"] = error
@@ -1243,7 +1242,7 @@ INVALID_AUTHZ = HTTPException(
 )
 
 
-def parse_authorization(authz_str: str):
+async def parse_authorization(authz_str: str):
     if not authz_str:
         if not ALLOW_ANONYMOUS:
             logger.error("anonymous access is not allowed")
@@ -1279,6 +1278,10 @@ def parse_authorization(authz_str: str):
         else:
             raise INVALID_AUTHZ
     elif authz_key == AUTHZ_KEY_BEARER:
+        if TOKEN_VERIFY:
+            claims = await verify_token(authz_token, use_raise=False)
+            if not claims:
+                raise INVALID_AUTHZ
         authz_type = AUTHZ_TYPE_OAUTH
         user = None
         passwd = authz_token
@@ -1325,13 +1328,9 @@ async def set_env(request, authorization):
     auth_info = await switch_auth_from_session(request)
     if auth_info is not None:
         authz_type, user, passwd = auth_info
-
-        # check logout time
-
-
     else:
         # get access token or password from Authorization header
-        authz_type, user, passwd = parse_authorization(authorization)
+        authz_type, user, passwd = await parse_authorization(authorization)
         logger.debug(f"set_env: authz header / user={user}")
 
     if authz_type == AUTHZ_TYPE_OAUTH:
