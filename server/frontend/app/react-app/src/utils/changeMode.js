@@ -1,4 +1,5 @@
 import { encodePath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
 
@@ -19,7 +20,7 @@ async function changeMode(path, mode) {
     );
 
     try {
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             method: "POST",
             credentials: "include",
             headers: {

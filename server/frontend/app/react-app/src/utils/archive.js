@@ -1,4 +1,5 @@
 import { API_URL } from "@utils/config";
+import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
 
 /*
@@ -47,7 +48,7 @@ async function gfptar(
     });
 
     try {
-        const response = await fetch(dlurl, request);
+        const response = await apiFetch(dlurl, request);
 
         if (!response.ok) {
             const error = await response.json();

@@ -1,4 +1,5 @@
 import { encodePath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
 
@@ -9,7 +10,7 @@ async function dirCommon(path, method, message, params = null) {
     const epath = encodePath(path);
     try {
         const url = `${API_URL}/dir${epath}?${params || ""}`;
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             credentials: "include",
             method: method,
         });

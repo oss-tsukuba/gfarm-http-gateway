@@ -435,3 +435,25 @@ export const hasTouchScreen = () => {
         );
     }
 };
+
+export function closeAllModals() {
+    // Close all open modals
+    document.querySelectorAll(".modal.show").forEach((el) => {
+        // Calls hide() if a Bootstrap instance exists
+        if (window.bootstrap && window.bootstrap.Modal) {
+            const inst = window.bootstrap.Modal.getInstance(el) || new window.bootstrap.Modal(el);
+            inst.hide();
+        }
+
+        el.classList.remove("show");
+        el.setAttribute("aria-hidden", "true");
+        el.style.display = "none";
+    });
+
+    // Remove all backdrops
+    document.querySelectorAll(".modal-backdrop").forEach((el) => el.remove());
+
+    // Reset body
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("paddingRight");
+}

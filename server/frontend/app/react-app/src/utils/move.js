@@ -1,4 +1,5 @@
 import { API_URL } from "@utils/config";
+import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
 
 async function moveItems(files, setError) {
@@ -19,7 +20,7 @@ async function moveItems(files, setError) {
 
         try {
             const url = `${API_URL}/move`;
-            const response = await fetch(url, {
+            const response = await apiFetch(url, {
                 method: "POST",
                 credentials: "include",
                 headers: {

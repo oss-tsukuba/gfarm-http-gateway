@@ -1,4 +1,5 @@
 import { encodePath, getParentPath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { createDir } from "@utils/dircommon";
 import { API_URL } from "@utils/config";
 import get_error_message, { ErrorCodes, get_ui_error } from "@utils/error";
@@ -101,7 +102,7 @@ async function checkPermission(uploadDir) {
     const epath = encodePath(uploadDir);
     const fullPath = `${API_URL}/dir${epath}?show_hidden=on&effperm=on`;
     try {
-        const response = await fetch(fullPath, {
+        const response = await apiFetch(fullPath, {
             credentials: "include",
         });
         if (!response.ok) {

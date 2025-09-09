@@ -1,11 +1,12 @@
 import { encodePath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
 
 async function getSymlink(symlink, get_fullpath) {
     const epath = encodePath(symlink);
     const fullpath = `${API_URL}/symlink${epath}?get_fullpath${get_fullpath ? "on" : "off"}`;
-    const response = await fetch(fullpath, {
+    const response = await apiFetch(fullpath, {
         credentials: "include",
     });
     if (!response.ok) {
@@ -19,7 +20,7 @@ async function getSymlink(symlink, get_fullpath) {
 
 async function setSymlink(source, destination) {
     const fullpath = `${API_URL}/symlink`;
-    const response = await fetch(fullpath, {
+    const response = await apiFetch(fullpath, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

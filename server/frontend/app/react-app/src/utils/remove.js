@@ -1,4 +1,5 @@
 import { encodePath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
 
@@ -12,7 +13,7 @@ async function removeItem(path, isFile = true) {
             ? `${API_URL}/file${epath}`
             : `${API_URL}/file${epath}?force=on&recursive=on`;
         console.debug("delete url", url);
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             credentials: "include",
             method: "DELETE",
         });

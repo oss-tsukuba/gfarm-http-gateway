@@ -1,4 +1,5 @@
 import { encodePath } from "@utils/func";
+import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
 
@@ -8,7 +9,7 @@ export default async function getList(dirPath, showHidden, setData, signal, batc
         `${API_URL}/dir${epath}` +
         `?show_hidden=${showHidden ? "on" : "off"}&long_format=on&time_format=full&output_format=json`;
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
         credentials: "include",
         signal,
     });

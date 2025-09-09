@@ -1,4 +1,5 @@
 import { API_URL } from "@utils/config";
+import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
 
 function getProgress(copied, total) {
@@ -36,7 +37,7 @@ async function copyFile(srcpath, destpath, progressCallback) {
     });
 
     try {
-        const response = await fetch(dlurl, request);
+        const response = await apiFetch(dlurl, request);
 
         console.debug("response", response);
         if (!response.ok) {

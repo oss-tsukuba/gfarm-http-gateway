@@ -53,6 +53,15 @@ function App() {
                                             element={<DownloadHandler />}
                                         />
                                         <Route
+                                            path="/auth_error"
+                                            element={
+                                                <ErrorPage
+                                                    error={"Authentication error"}
+                                                    errorcode={401}
+                                                />
+                                            }
+                                        />
+                                        <Route
                                             path="*"
                                             element={<ErrorPage error={"Page not found"} />}
                                         />
