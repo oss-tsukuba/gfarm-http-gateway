@@ -13,6 +13,7 @@ export GFARM_HTTP_OIDC_BASE_URL=http://keycloak.test/
 #export GFARM_HTTP_ALLOW_ANONYMOUS=yes
 export GFARM_HTTP_DEBUG=yes
 export PYTHONPATH="$API_DIR"
+export GFARM_HTTP_TOKEN_VERIFY=no
 
 #$PYTEST "$@" "${API_DIR}/test/test_gfarm_http_gateway.py"
 $PYTEST "$@"

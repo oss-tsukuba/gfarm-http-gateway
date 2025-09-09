@@ -225,7 +225,7 @@ OIDC_META_URL = conf.GFARM_HTTP_OIDC_META_URL
 OIDC_KEYS_URL = str2none(conf.GFARM_HTTP_OIDC_KEYS_URL)
 OIDC_LOGOUT_URL = str2none(conf.GFARM_HTTP_OIDC_LOGOUT_URL)
 
-TOKEN_VERIFY = conf.GFARM_HTTP_TOKEN_VERIFY
+TOKEN_VERIFY = str2bool(conf.GFARM_HTTP_TOKEN_VERIFY)
 # sec.
 min_valid_time = conf.GFARM_HTTP_TOKEN_MIN_VALID_TIME_REMAINING
 TOKEN_MIN_VALID_TIME_REMAINING = int(min_valid_time)
@@ -1373,8 +1373,8 @@ async def set_env(request, authorization):
             'GFARM_SASL_PASSWORD': passwd,
         })
     else:  # anonymous
-        if not ALLOW_ANONYMOUS:
-            return None
+        # if not ALLOW_ANONYMOUS:
+        #     return None
         user = "anonymous"
         env.update({
             # for Gfarm 2.8.6 or later
