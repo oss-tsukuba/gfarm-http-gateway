@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import Offcanvas from "bootstrap/js/dist/offcanvas";
-import { BsArrowUpSquare, BsArrowDownSquare, BsExclamationSquare } from "react-icons/bs";
+import { BsArrowUpSquare, BsArrowDownSquare, BsDashSquare } from "react-icons/bs";
 import PropTypes from "prop-types";
 
 function ProgressView({ show, onHide, tasks, removeDoneTasks, removeTasks }) {
@@ -79,7 +79,7 @@ function ProgressView({ show, onHide, tasks, removeDoneTasks, removeTasks }) {
                                             ) : task.type === "download" ? (
                                                 <BsArrowDownSquare className="me-2" />
                                             ) : (
-                                                <BsExclamationSquare className="me-2" />
+                                                <BsDashSquare className="me-2" />
                                             )}
                                             {task.name}
                                         </h6>
