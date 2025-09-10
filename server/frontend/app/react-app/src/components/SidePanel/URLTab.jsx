@@ -5,8 +5,10 @@ import PropTypes from "prop-types";
 function URLTab({ item, active }) {
     const copyLinkRef = useRef(null);
     const copyDownloadLinkRef = useRef(null);
+    const copyAPILinkRef = useRef(null);
     const [copiedLink, setCopiedLink] = useState(false);
     const [copiedDownload, setCopiedDownload] = useState(false);
+    const [copiedAPI, setCopiedAPI] = useState(false);
 
     const handleCopy = (ref, setCopiedFn) => {
         if (ref?.current) {
@@ -75,7 +77,7 @@ function URLTab({ item, active }) {
                             <div className="input-group input-group-sm">
                                 <input
                                     id="resource-path-input"
-                                    ref={copyDownloadLinkRef}
+                                    ref={copyAPILinkRef}
                                     type="text"
                                     className="form-control"
                                     readOnly
@@ -84,11 +86,9 @@ function URLTab({ item, active }) {
                                 <button
                                     className="btn btn-outline-secondary"
                                     type="button"
-                                    onClick={() =>
-                                        handleCopy(copyDownloadLinkRef, setCopiedDownload)
-                                    }
+                                    onClick={() => handleCopy(copyAPILinkRef, setCopiedAPI)}
                                 >
-                                    {copiedDownload ? "Copied!" : "Copy"}
+                                    {copiedAPI ? "Copied!" : "Copy"}
                                 </button>
                             </div>
                         </div>
