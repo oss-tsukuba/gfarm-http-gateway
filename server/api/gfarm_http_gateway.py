@@ -1407,13 +1407,16 @@ def get_client_ip_from_request(request):
     return request.client.host
 
 
-async def set_tokenfilepath_to_env(request, env, filepath=None, expire=None):
-    tokenfile = filepath
+# Used only by archive_files()
+# - Creates a token file and sets its path in env when filepath is None.
+# - Updates the token file when filepath is not None.
+async def update_token_file(request, env, filepath=None, expire=None):
+    token_file = filepath
 
     if expire is not None:
         current_time = int(time.time())
         if (current_time + TOKEN_MIN_VALID_TIME_REMAINING) <= expire:
-            return tokenfile, env, expire
+            return token_file, env, expire
 
     access_token = await get_access_token(request)
     if access_token is None:
@@ -1433,17 +1436,19 @@ async def set_tokenfilepath_to_env(request, env, filepath=None, expire=None):
             delete=False) as fp:
         # Write access_token in the token file
         fp.write(access_token)
-        if tokenfile is None:
-            tokenfile = fp.name
-            env['JWT_USER_PATH'] = tokenfile
+        if token_file is None:
+            # set to env
+            token_file = fp.name
+            env['JWT_USER_PATH'] = token_file
         else:
-            os.rename(fp.name, tokenfile)
+            # update
+            os.rename(fp.name, token_file)
 
     ipaddr = get_client_ip_from_request(request)
     logger.debug(
-        f"{ipaddr}:0 user={user}, access_token file:{tokenfile} updated"
+        f"{ipaddr}:0 user={user}, access_token file:{token_file} updated"
     )
-    return tokenfile, env, exp
+    return token_file, env, exp
 
 
 #############################################################################
@@ -3416,7 +3421,7 @@ async def archive_files(
     env = await set_env(request, authorization)
     # Set the token file path in env for long-term exec
     # (updated in progress_generator())
-    tokenfilepath, env, expire = await set_tokenfilepath_to_env(request, env)
+    tokenfilepath, env, expire = await update_token_file(request, env)
     user = get_user_from_env(env)
     ipaddr = get_client_ip_from_env(env)
     log_operation(env, request.method, apiname, opname, tar_data)
@@ -3487,7 +3492,7 @@ async def archive_files(
                     logger.debug(
                         f"{ipaddr}:0 user={user}, cmd={opname}, json={j_line}")
                     # Update access_token
-                    _, _, exp = await set_tokenfilepath_to_env(
+                    _, _, exp = await update_token_file(
                         request, env, tokenfilepath, exp)
             await stderr_task
             return_code = await p.wait()
