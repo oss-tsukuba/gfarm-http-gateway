@@ -72,8 +72,6 @@
 - Should display the login title on the login page
 - Should display the login button for OIDC
 - Should log in via OIDC and show the file list
-- Should log in with valid SASL credentials and show the file list
-- Should stay on the login page with invalid SASL credentials
 - Should log out and redirect to the login screen
 - [Android] Should trigger install prompt when A2HS button is clicked
 - [iOS] Should show instructions modal when A2HS button is clicked

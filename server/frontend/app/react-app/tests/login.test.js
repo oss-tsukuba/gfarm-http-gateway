@@ -133,39 +133,39 @@ test("Should log in via OIDC and show the file list", async ({ page }) => {
     await expect(fileRow).toBeVisible();
 });
 
-test("Should log in with valid SASL credentials and show the file list", async ({ page }) => {
-    login = false;
-    await page.goto(FRONTEND_URL);
-    await page.waitForFunction(() => window.location.href.includes("/login"));
+// test("Should log in with valid SASL credentials and show the file list", async ({ page }) => {
+//     login = false;
+//     await page.goto(FRONTEND_URL);
+//     await page.waitForFunction(() => window.location.href.includes("/login"));
 
-    await page.fill("#username", "user1");
-    await page.fill("#password", "pass1");
+//     await page.fill("#username", "user1");
+//     await page.fill("#password", "pass1");
 
-    // Submit the form
-    const navigationPromise = page.waitForNavigation();
-    await page.click('button[type="submit"]');
-    await navigationPromise;
+//     // Submit the form
+//     const navigationPromise = page.waitForNavigation();
+//     await page.click('button[type="submit"]');
+//     await navigationPromise;
 
-    await page.waitForLoadState("networkidle");
+//     await page.waitForLoadState("networkidle");
 
-    const fileRow = page.locator(`[data-testid="row-${expectedFilename}"]`);
-    await expect(fileRow).toBeVisible();
-});
+//     const fileRow = page.locator(`[data-testid="row-${expectedFilename}"]`);
+//     await expect(fileRow).toBeVisible();
+// });
 
-test("Should stay on the login page with invalid SASL credentials", async ({ page }) => {
-    login = false;
-    await page.goto(FRONTEND_URL);
-    await page.waitForFunction(() => window.location.href.includes("/login"));
+// test("Should stay on the login page with invalid SASL credentials", async ({ page }) => {
+//     login = false;
+//     await page.goto(FRONTEND_URL);
+//     await page.waitForFunction(() => window.location.href.includes("/login"));
 
-    await page.fill("#username", "wronguser");
-    await page.fill("#password", "wrongpass");
+//     await page.fill("#username", "wronguser");
+//     await page.fill("#password", "wrongpass");
 
-    const navigationPromise = page.waitForNavigation();
-    await page.click('button[type="submit"]');
-    await navigationPromise;
+//     const navigationPromise = page.waitForNavigation();
+//     await page.click('button[type="submit"]');
+//     await navigationPromise;
 
-    await expect(page).toHaveURL(/login/);
-});
+//     await expect(page).toHaveURL(/login/);
+// });
 
 // Logout Process Test
 

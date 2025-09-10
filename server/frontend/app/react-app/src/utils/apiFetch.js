@@ -1,9 +1,9 @@
 import { closeAllModals } from "@utils/func";
 const EXCLUDE_PATHS = [
-    /^\/login(?:\/|$)/,
-    /^\/user_info(?:\/|$)/,
-    /^\/users(?:\/|$)/,
-    /^\/groups(?:\/|$)/,
+    /^.*\/login(?:\?.*)?$/,
+    /^.*\/user_info(?:\?.*)?$/,
+    /^.*\/users(?:\?.*)?$/,
+    /^.*\/groups(?:\?.*)?$/,
 ];
 
 export async function apiFetch(api_url, options = {}) {
