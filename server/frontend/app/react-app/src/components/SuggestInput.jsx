@@ -37,14 +37,10 @@ function SuggestInput({ id, value, onChange, suggestions, placeholder = null, di
             e.preventDefault();
             setHighlight((prev) => (prev - 1 + filtered.length) % filtered.length);
         } else if (e.key === "Tab" || e.key === "Enter") {
-            if (filtered.length > 0) {
-                e.preventDefault();
-                const selected = filtered[highlight];
-                setDisplayName(selected.name);
-                onChange(selected.value);
-            } else {
-                onChange(displayName); // new custom input
-            }
+            e.preventDefault();
+            const selected = filtered[highlight];
+            setDisplayName(selected.name);
+            onChange(selected.value);
         }
     };
 
@@ -64,15 +60,11 @@ function SuggestInput({ id, value, onChange, suggestions, placeholder = null, di
                 onFocus={() => setFocused(true)}
                 onBlur={() => {
                     setTimeout(() => setFocused(false), 100);
-
-                    const matched = suggestions.find((s) => s.name === displayName);
-                    if (matched) {
-                        onChange(matched.value); // matched suggestion
-                    } else {
-                        onChange(displayName); // new custom input
-                    }
                 }}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    onChange(e.target.value);
+                }}
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 placeholder={placeholder ? placeholder : ""}
