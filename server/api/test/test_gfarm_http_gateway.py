@@ -900,7 +900,7 @@ async def test_zip_export_file(
         mock_gfls,
         mock_gfexport):
     expected_zip_paths = [
-        "./testfile1.txt",
+        "testfile1.txt",
     ]
     expected_contents = [
         "/tmp/testdir/testfile1.txt",
@@ -946,7 +946,7 @@ async def test_zip_export_gfls_error(
         mock_gfls,
         mock_gfexport):
     test_files = {"paths": ["/tmp/testdir/testfile1.txt"]}
-    expected_filename = "./testfile1.txt"
+    expected_filename = "testfile1.txt"
     response = client.post("/zip",
                            headers=req_headers_oidc_auth,
                            data=test_files)
@@ -978,7 +978,7 @@ async def test_zip_export_gfexport_error(
         mock_gfls,
         mock_exec):
     test_files = {"paths": ["/tmp/testdir/testfile1.txt"]}
-    expected_filename = "./testfile1.txt"
+    expected_filename = "testfile1.txt"
     expected_content = "/tmp/testdir/testfile1.txt"
     response = client.post("/zip",
                            headers=req_headers_oidc_auth,

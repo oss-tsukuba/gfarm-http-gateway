@@ -2771,6 +2771,7 @@ async def zip_export(request: Request,
 
     async def add_entry_to_zip(zipf: zipfile.ZipFile, entry: Gfls_Entry):
         rel_path = os.path.join(entry.dirname, entry.name)
+        rel_path = os.path.normpath(rel_path)
         logger.debug(f"rel_path {rel_path}")
 
         zipinfo = zipfile.ZipInfo(filename=rel_path)
