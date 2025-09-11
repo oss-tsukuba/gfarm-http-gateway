@@ -1,27 +1,28 @@
 import React, { useState, useEffect } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import { useNotifications } from "@context/NotificationContext";
+import { useOverlay } from "@context/OverlayContext";
 import removeItems from "@utils/remove";
 import PropTypes from "prop-types";
 
 function DeleteModal({ setShowModal, itemsToDelete, setItemsToDelete, refresh }) {
     const title = "Delete";
     const [visible, setVisible] = useState(true);
-    const [isDeleting, setIsDeleting] = useState(false);
     const { addNotification } = useNotifications();
+    const { showOverlay, hideOverlay } = useOverlay();
 
     useEffect(() => {
-        if (!visible && !isDeleting) {
+        if (!visible) {
             setShowModal(false);
         }
-    }, [visible, isDeleting]);
+    }, [visible]);
 
     const handleDelete = () => {
         const deleteFile = async () => {
             setVisible(false);
-            setIsDeleting(true);
+            showOverlay("Deleting files... please wait");
             const error = await removeItems(itemsToDelete, refresh);
-            setIsDeleting(false);
+            hideOverlay();
             if (error) addNotification(title, error, "error");
             setItemsToDelete([]);
         };
@@ -58,16 +59,6 @@ function DeleteModal({ setShowModal, itemsToDelete, setItemsToDelete, refresh })
                     </ul>
                 </div>
             </ModalWindow>
-            {isDeleting && (
-                <div
-                    className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
-                    style={{ zIndex: 1050 }}
-                    data-testid="delete-overlay"
-                >
-                    <div className="spinner-border text-danger" role="status"></div>
-                    <div>Deleting files... please wait</div>
-                </div>
-            )}
         </div>
     );
 }

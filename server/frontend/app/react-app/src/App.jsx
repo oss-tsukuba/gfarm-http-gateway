@@ -13,6 +13,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ShowHiddenProvider } from "./context/ShowHiddenContext";
 import { ViewModeProvider } from "./context/ViewModeContext";
 import { DateFormatProvider } from "./context/DateFormatContext";
+import { OverlayProvider } from "./context/OverlayContext";
 
 function App() {
     const [cssLoading, setCssLoading] = useState(true);
@@ -44,29 +45,34 @@ function App() {
                     <ShowHiddenProvider>
                         <ViewModeProvider>
                             <DateFormatProvider>
-                                <HashRouter>
-                                    <Routes>
-                                        <Route path="/" element={<IndexHandler />} />
-                                        <Route path={`${ROUTE_STORAGE}/*`} element={<HomePage />} />
-                                        <Route
-                                            path={`${ROUTE_DOWNLOAD}/*`}
-                                            element={<DownloadHandler />}
-                                        />
-                                        <Route
-                                            path="/auth_error"
-                                            element={
-                                                <ErrorPage
-                                                    error={"Authentication error"}
-                                                    errorcode={401}
-                                                />
-                                            }
-                                        />
-                                        <Route
-                                            path="*"
-                                            element={<ErrorPage error={"Page not found"} />}
-                                        />
-                                    </Routes>
-                                </HashRouter>
+                                <OverlayProvider>
+                                    <HashRouter>
+                                        <Routes>
+                                            <Route path="/" element={<IndexHandler />} />
+                                            <Route
+                                                path={`${ROUTE_STORAGE}/*`}
+                                                element={<HomePage />}
+                                            />
+                                            <Route
+                                                path={`${ROUTE_DOWNLOAD}/*`}
+                                                element={<DownloadHandler />}
+                                            />
+                                            <Route
+                                                path="/auth_error"
+                                                element={
+                                                    <ErrorPage
+                                                        error={"Authentication error"}
+                                                        errorcode={401}
+                                                    />
+                                                }
+                                            />
+                                            <Route
+                                                path="*"
+                                                element={<ErrorPage error={"Page not found"} />}
+                                            />
+                                        </Routes>
+                                    </HashRouter>
+                                </OverlayProvider>
                             </DateFormatProvider>
                         </ViewModeProvider>
                     </ShowHiddenProvider>

@@ -52,7 +52,12 @@ function ModalWindow({
 
     return (
         <div className="modal fade" ref={modalRef} tabIndex="-1">
-            <div className={`modal-dialog ${size_class}`} role="document" data-testid={testid}>
+            <div
+                className={`modal-dialog ${size_class}`}
+                role="document"
+                data-testid={testid}
+                style={{ zIndex: 1100 }}
+            >
                 <div className="modal-content">
                     <div className="modal-header">
                         {title}

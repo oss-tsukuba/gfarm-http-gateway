@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { CollectPathsFromFiles, checkConflicts } from "@utils/func";
+import { useOverlay } from "@context/OverlayContext";
 import ConflictResolutionModal from "@components/Modal/ConflictResolutionModal";
 import {
     BsFileEarmarkArrowUp,
@@ -15,8 +16,10 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
     const folderInputRef = useRef(null);
     const [showConfirm, setShowConfirm] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
+    const { showOverlay, hideOverlay } = useOverlay();
 
     const handleFileChange = (e) => {
+        showOverlay();
         const targetfiles = Array.from(e.target.files);
         console.debug("targetfiles:", targetfiles);
         const collectedItems = CollectPathsFromFiles(targetfiles).map((file) => {
@@ -32,6 +35,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
             console.debug("res", res);
             console.debug("collectedFiles", res.incomingItems);
             if (res.hasConflict) {
+                hideOverlay();
                 setSelectedItems(res.incomingItems);
                 setShowConfirm(true);
                 e.target.value = null;
@@ -40,6 +44,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
             actions.upload(res.incomingItems);
         }
         e.target.value = null;
+        hideOverlay();
     };
 
     const confirmUpload = (incomingItems) => {

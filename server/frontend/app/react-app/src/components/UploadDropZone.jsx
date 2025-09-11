@@ -2,17 +2,23 @@ import React, { useState, useEffect } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import ConflictResolutionModal from "@components/Modal/ConflictResolutionModal";
 import { CollectPathsFromItems, formatFileSize, getTimeStr, checkConflicts } from "@utils/func";
+import { useOverlay } from "@context/OverlayContext";
 import "@css/DropZone.css";
 import PropTypes from "prop-types";
 
 function UploadDropZone({ onUpload, uploadDir, currentItems }) {
     const [isDragActive, setIsDragActive] = useState(false);
     const [dragging, setDragging] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
     const [visibleModal, setVisibleModal] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
     const [showReConfirm, setShowReConfirm] = useState(false);
     const [selectedItems, setSelectedItems] = useState(null);
     const [modalText, setModalText] = useState(null);
+    const { showOverlay, hideOverlay } = useOverlay();
+
+    useEffect(() => {
+        setShowConfirm(visibleModal);
+    }, [visibleModal]);
 
     useEffect(() => {
         const handleDragEnter = async (e) => {
@@ -70,6 +76,7 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
         e.stopPropagation();
         setDragging(false);
         setIsDragActive(false);
+        showOverlay();
         // const files = Array.from(e.dataTransfer.files);
         const items = e.dataTransfer.items;
         const result = await CollectPathsFromItems(items);
@@ -83,6 +90,7 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
         });
         console.debug("Collected files:", collectedItems);
         if (collectedItems.length === 0) {
+            hideOverlay();
             return;
         }
 
@@ -92,21 +100,22 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
                 {collectedItems !== null &&
                     collectedItems.map((item, idx) => (
                         <li key={idx}>
-                            <strong>{item.path}</strong> —{" "}
-                            {formatFileSize(item.size, item.is_dir) || "unknown size"}
+                            <strong className="text-break">{item.path}</strong> —{" "}
+                            {formatFileSize(item.size, item.is_dir) || "unknown size"}{" "}
                             {getTimeStr(item.mtime)}
                         </li>
                     ))}
             </ul>
         );
-        setShowConfirm(true);
         setVisibleModal(true);
+        hideOverlay();
     };
 
     const confirmUpload = () => {
-        setIsDragActive(false);
         setVisibleModal(false);
+        setIsDragActive(false);
         if (selectedItems.length > 0) {
+            showOverlay();
             const res = checkConflicts(selectedItems, currentItems);
 
             console.debug("res", res);
@@ -114,14 +123,15 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
             if (res.hasConflict) {
                 setSelectedItems(res.incomingItems);
                 setShowReConfirm(true);
+                hideOverlay();
                 return;
             }
             onUpload(res.incomingItems);
+            hideOverlay();
         }
     };
 
     const re_confirmUpload = (incomingItems) => {
-        setShowReConfirm(false);
         if (incomingItems.length > 0) {
             console.debug("incomingItems:", incomingItems);
             onUpload(incomingItems); // pass to upload function
@@ -131,9 +141,6 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
     const cancelUpload = () => {
         setIsDragActive(false);
         setVisibleModal(false);
-        if (showReConfirm) {
-            setShowReConfirm(false);
-        }
     };
 
     return (
@@ -155,6 +162,7 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
                     show={visibleModal}
                     onCancel={cancelUpload}
                     onConfirm={confirmUpload}
+                    size="large"
                     title={
                         <p className="modal-title">
                             Are you sure you want to upload the following files?
@@ -166,7 +174,7 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
             )}
             {showReConfirm && (
                 <ConflictResolutionModal
-                    setShowModal={setShowConfirm}
+                    setShowModal={setShowReConfirm}
                     incomingItems={selectedItems}
                     setIncomingItems={setSelectedItems}
                     existingNames={currentItems.map((item) => item.name)}

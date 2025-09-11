@@ -5,6 +5,7 @@ import ConflictResolutionModal from "@components/Modal/ConflictResolutionModal";
 import useFileList from "@hooks/useFileList";
 import { useShowHidden } from "@context/ShowHiddenContext";
 import { useNotifications } from "@context/NotificationContext";
+import { useOverlay } from "@context/OverlayContext";
 import { getParentPath, checkConflicts } from "@utils/func";
 import moveItems from "@utils/move";
 import { ErrorCodes, get_ui_error } from "@utils/error";
@@ -15,7 +16,6 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
     const title = "Move";
     const { showHidden } = useShowHidden();
     const [visible, setVisible] = useState(true);
-    const [isMoving, setIsMoving] = useState(false);
     const [suggestDir, setSuggestDir] = useState(currentDir);
     const [targetPath, setTargetPath] = useState(currentDir);
     const {
@@ -30,6 +30,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
     const [pendingConfirm, setPendingConfirm] = useState(false);
     const suggestions = useMemo(() => currentItems.filter((f) => f.is_dir), [currentItems]);
     const { addNotification } = useNotifications();
+    const { showOverlay, hideOverlay } = useOverlay();
 
     useEffect(() => {
         if (itemsToMove.length < 1 && pendingItems.length < 1) {
@@ -59,9 +60,9 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
     };
 
     const handleMove = async (items) => {
-        setIsMoving(true);
+        showOverlay("Moving files... please wait");
         await moveItems(items, setError);
-        setIsMoving(false);
+        hideOverlay();
         setTargetPath("");
         setPendingItems([]);
         setItemsToMove([]);
@@ -120,7 +121,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
         }
         setVisible(false);
 
-        setIsMoving(true);
+        showOverlay("Moving files... please wait");
 
         if (suggestDir !== targetPath) {
             setSuggestDir(targetPath);
@@ -237,16 +238,6 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
                         handleMove(items);
                     }}
                 />
-            )}
-            {isMoving && (
-                <div
-                    className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
-                    style={{ zIndex: 1050 }}
-                    data-testid="move-overlay"
-                >
-                    <div className="spinner-border text-primary" role="status"></div>
-                    <div>Moving files... please wait</div>
-                </div>
             )}
         </div>
     );
