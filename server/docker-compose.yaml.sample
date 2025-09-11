@@ -47,8 +47,8 @@ services:
 #     # Optional: TLS/mTLS certificates directory
 #     # Expected files:
 #     #   - ca.crt            : CA certificate that signed redis.crt (and client certs for mTLS)
-#     #   - redis.crt/.key    : Server certificate/key for Redis (SAN should include "redis")
-#     #   - client.crt/.key   : (Optional, mTLS) Client certificate/key used by the gateway
+#     #   - redis.{crt,key}    : Server certificate/key for Redis (SAN should include "redis")
+#     #   - client.{crt,key}  : (Optional, mTLS) Client certificate/key used by the gateway
 #     # If you are NOT using TLS, you can remove this mount and adjust healthcheck accordingly.
 #     - ./redis/certs:/certs:ro
 #     # Optional: Persistent data directory.

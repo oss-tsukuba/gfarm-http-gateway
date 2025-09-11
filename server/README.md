@@ -22,6 +22,7 @@ The configuration file is organized into the following sections:
 - **Database (Redis)** - Token persistence using Redis
   - optional; required only when GFARM_HTTP_TOKEN_STORE=database
 - **Performance** - Performance-related settings
+- **Logging** - Local log file output and rotation settings
 - **Development & Debug** - Debug settings (keep defaults for production)
 
 ### How to configure

@@ -297,7 +297,6 @@ else:
     REDIS_SSL_CA_CERTS = None
     REDIS_USERNAME = None
     REDIS_PASSWORD = None
-    REDIS_TTL = 0
 try:
     REDIS_ID_PREFIX = conf.GFARM_HTTP_REDIS_ID_PREFIX
 except Exception:
@@ -318,6 +317,28 @@ try:
     REDIS_LOCK_INTERVAL = float(conf.GFARM_HTTP_REDIS_LOCK_INTERVAL)  # seconds
 except Exception:
     REDIS_LOCK_INTERVAL = 1.0
+
+try:
+    LOCAL_LOGFILE = conf.GFARM_HTTP_LOCAL_LOGFILE
+except Exception:
+    LOCAL_LOGFILE = None
+
+try:
+    LOCAL_LOGFILE_ROTATION = conf.GFARM_HTTP_LOCAL_LOGFILE_ROTATION
+except Exception:
+    LOCAL_LOGFILE_ROTATION = "100 MB"
+
+try:
+    LOCAL_LOGFILE_RETENTION = conf.GFARM_HTTP_LOCAL_LOGFILE_RETENTION
+except Exception:
+    LOCAL_LOGFILE_RETENTION = "10 days"
+
+try:
+    LOCAL_LOGFILE_COMPRESSION = conf.GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION
+    if not LOCAL_LOGFILE_COMPRESSION:
+        raise
+except Exception:
+    LOCAL_LOGFILE_COMPRESSION = None
 
 
 def conf_check_not_recommended():
@@ -429,7 +450,19 @@ if not DEBUG:
 loguru_handler = {"sink": sys.stdout, "level": loglevel}
 # loguru_handler.update({"format": format_record})
 loguru_handlers = [loguru_handler]
+
+if LOCAL_LOGFILE:
+    loguru_handlers.append({
+        "sink": LOCAL_LOGFILE,
+        "level": loglevel,
+        "rotation": LOCAL_LOGFILE_ROTATION,
+        "retention": LOCAL_LOGFILE_RETENTION,
+        "compression": LOCAL_LOGFILE_COMPRESSION,
+        "enqueue": True,
+    })
+
 logger.configure(handlers=loguru_handlers)
+
 
 # Examples
 #   logger.info("loguru log")
@@ -3501,7 +3534,8 @@ async def archive_files(
                 stdout = buffer.decode("utf-8", errors="replace").strip()
                 logger.error(
                     f"{ipaddr}:0 user={user}, cmd={opname}, {stdout} {elist}")
-                j_line = json.dumps({"message": stdout, "error": elist})
+                j_line = json.dumps({"message": stdout,
+                                     "error": ','.join(elist)})
                 yield j_line + '\n'
         except asyncio.CancelledError:
             p.terminate()

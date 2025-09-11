@@ -256,6 +256,36 @@ GFARM_HTTP_REDIS_LOCK_INTERVAL=1.0
 GFARM_HTTP_RECURSIVE_MAX_DEPTH=16
 
 # ========================================
+# Logging
+# ========================================
+
+# GFARM_HTTP_LOCAL_LOGFILE
+#   path to local log file
+#   logs are written to both stderr and this file
+#   default: empty (stderr only)
+GFARM_HTTP_LOCAL_LOGFILE=
+
+# GFARM_HTTP_LOCAL_LOGFILE_ROTATION
+#   rotation policy for local log file
+#   value example: "100 MB", "1 week", "00:00"
+#   default: "100 MB"
+GFARM_HTTP_LOCAL_LOGFILE_ROTATION="100 MB"
+
+# GFARM_HTTP_LOCAL_LOGFILE_RETENTION
+#   retention policy for rotated log files
+#   value example: "10 days", "3 months"
+#   default: "10 days"
+GFARM_HTTP_LOCAL_LOGFILE_RETENTION="10 days"
+
+
+# GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION
+#   compression format for rotated log files
+#   value: none ... default (no compression)
+#          zip  ... compress rotated files in .zip
+#          gz   ... compress rotated files in .gz
+GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION=none
+
+# ========================================
 # Development & Debug (for production, keep default values)
 # ========================================
 
