@@ -152,6 +152,12 @@ function FileListView({
 
     useEffect(() => {
         const handleKeyDownWithSelectedItems = (e) => {
+            // Ignore input elements
+            const tag = (e.target?.tagName || "").toLowerCase();
+            if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) {
+                return;
+            }
+
             if (e.key === "Delete") {
                 e.preventDefault();
                 SelectedMenuActions.remove(selectedItems);
@@ -162,7 +168,7 @@ function FileListView({
         return () => {
             window.removeEventListener("keydown", handleKeyDownWithSelectedItems);
         };
-    }, [selectedItems]);
+    }, [selectedItems, SelectedMenuActions]);
 
     useEffect(() => {
         const handleKeyDownWithLastSelectedItem = (e) => {
@@ -178,7 +184,7 @@ function FileListView({
         return () => {
             window.removeEventListener("keydown", handleKeyDownWithLastSelectedItem);
         };
-    }, [lastSelectedItem]);
+    }, [lastSelectedItem, ItemMenuActions]);
 
     return (
         <div className="d-flex flex-column h-100" data-testid="storage-view">
