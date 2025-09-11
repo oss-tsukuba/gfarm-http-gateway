@@ -280,10 +280,10 @@ GFARM_HTTP_LOCAL_LOGFILE_RETENTION="10 days"
 
 # GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION
 #   compression format for rotated log files
-#   value: none ... default (no compression)
-#          zip  ... compress rotated files in .zip
-#          gz   ... compress rotated files in .gz
-GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION=none
+#   value: empty ... default (no compression)
+#          zip   ... compress rotated files in .zip
+#          gz    ... compress rotated files in .gz
+GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION=
 
 # ========================================
 # Development & Debug (for production, keep default values)
