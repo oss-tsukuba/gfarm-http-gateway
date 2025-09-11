@@ -74,7 +74,8 @@ ARG NODE_VERSION=22.18.0
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4 libssl3 libexpat1 libgcc-s1 libstdc++6 libuuid1 \
     libsasl2-2 libsasl2-modules sasl2-bin netbase \
-    ca-certificates curl python3-minimal python3-pip python3-venv xz-utils \
+    ca-certificates curl xz-utils \
+    python3-minimal python3-pip python3-venv python3-docopt python3-schema \
     && case "$(dpkg --print-architecture)" in \
     amd64) NODE_ARCH="x64" ;; \
     arm64) NODE_ARCH="arm64" ;; \
