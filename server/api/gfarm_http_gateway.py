@@ -3121,25 +3121,36 @@ async def file_copy(copy_data: FileOperation,
             return
 
         # final move
-        p_mv = await gfmv(env, tmppath, dest_path)
-        stderr_mv = asyncio.create_task(log_stderr("gfmv", p_mv, elist))
-        opname = "gfmv"
-        log_operation(env, request.method, apiname, opname, gfarm_path)
-        await stderr_mv
-        return_code_mv = await p_mv.wait()
+        try:
+            fresh_env = await set_env(request, authorization)
+            p_mv = await gfmv(fresh_env , tmppath, dest_path)
+            stderr_mv = asyncio.create_task(log_stderr("gfmv", p_mv, elist))
+            opname = "gfmv"
+            log_operation(fresh_env, request.method,
+                          apiname, opname, gfarm_path)
+            await stderr_mv
+            return_code_mv = await p_mv.wait()
 
-        if return_code_mv == 0:
+            if return_code_mv != 0:
+                raise RuntimeError(f"gfmv failed: rc={return_code_mv}")
+
             ok, error_message = await match_checksum(
-                env, request.method, apiname, gfarm_path, dest_path, elist)
+                fresh_env, request.method, apiname,
+                gfarm_path, dest_path, elist)
             current_status["warn"] = error_message if ok is None else None
             current_status["error"] = None if ok is None else error_message
             current_status["done"] = True
             yield json.dumps(current_status) + "\n"
-        else:
-            p_clean = await gfrm(env, tmppath, force=True)
-            await asyncio.create_task(log_stderr("gfrm", p_clean, elist))
-            await p_clean.wait()
-            current_status["error"] = "move failed"
+
+        except Exception as e:
+            try:
+                fresh_env = await set_env(request, authorization)
+                p_clean = await gfrm(fresh_env, tmppath, force=True)
+                await asyncio.create_task(log_stderr("gfrm", p_clean, elist))
+                await p_clean.wait()
+            except Exception:
+                pass
+            current_status["error"] = str(e)
             current_status["done"] = True
             yield json.dumps(current_status) + "\n"
 
