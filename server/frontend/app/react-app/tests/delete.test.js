@@ -47,8 +47,8 @@ test("Should delete a single file from the context menu", async ({ page }) => {
     await expect(deleteModal).not.toBeVisible();
 
     // Should show deleting overlay
-    await expect(page.locator('[data-testid="delete-overlay"]')).toBeVisible();
-    await expect(page.locator('[data-testid="delete-overlay"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="global-overlay"]')).toBeVisible();
+    await expect(page.locator('[data-testid="global-overlay"]')).not.toBeVisible();
 });
 
 test("Should delete multiple files from the actions menu", async ({ page }) => {

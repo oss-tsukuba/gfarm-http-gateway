@@ -104,8 +104,8 @@ test("Should move multiple files from the actions menu", async ({ page }) => {
     await expect(moveModal).not.toBeVisible();
 
     // Should show deleting overlay
-    await expect(page.locator('[data-testid="move-overlay"]')).toBeVisible();
-    await expect(page.locator('[data-testid="move-overlay"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="global-overlay"]')).toBeVisible();
+    await expect(page.locator('[data-testid="global-overlay"]')).not.toBeVisible();
 
     // Wait until exactly N POST /move requests were made (one per file)
     await expect.poll(() => seen.length, { timeout: 5000 }).toBe(filesToMove.length);
