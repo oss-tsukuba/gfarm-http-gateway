@@ -1,4 +1,4 @@
-import { encodePath } from "@utils/func";
+import { encodePath, createLineSplitter } from "@utils/func";
 import { apiFetch } from "@utils/apiFetch";
 import { API_URL } from "@utils/config";
 import get_error_message from "@utils/error";
@@ -20,7 +20,6 @@ export default async function getList(dirPath, showHidden, setData, signal, batc
         throw new Error(message);
     }
 
-    const useStreamAPI = typeof TextDecoderStream !== "undefined" && response.body?.pipeThrough;
     const batch = [];
     let lastYield = 0;
 
@@ -52,67 +51,18 @@ export default async function getList(dirPath, showHidden, setData, signal, batc
         }
     };
 
-    if (useStreamAPI) {
-        // ---- Recommended: Native Stream path ----
-        const lineSplitter = new TransformStream({
-            start() {
-                this.buffer = "";
-            },
-            transform(chunk, controller) {
-                this.buffer += chunk;
-                let idx;
-                while ((idx = this.buffer.indexOf("\n")) !== -1) {
-                    controller.enqueue(this.buffer.slice(0, idx));
-                    this.buffer = this.buffer.slice(idx + 1);
-                }
-            },
-            flush(controller) {
-                if (this.buffer) controller.enqueue(this.buffer);
-            },
-        });
+    const lineSplitter = createLineSplitter();
+    const textStream = response.body.pipeThrough(new TextDecoderStream()).pipeThrough(lineSplitter);
 
-        const textStream = response.body
-            .pipeThrough(new TextDecoderStream())
-            .pipeThrough(lineSplitter);
-
-        const reader = textStream.getReader();
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                await handleLine(value);
-            }
-            await flushBatch();
-        } finally {
-            reader.releaseLock();
+    const reader = textStream.getReader();
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            await handleLine(value);
         }
-    } else {
-        // ---- Fallback: Manual Decoding ----
-        const decoder = new TextDecoder("utf-8");
-        const reader = response.body.getReader();
-        let buffer = "";
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-
-                let start = 0;
-                while (true) {
-                    const nl = buffer.indexOf("\n", start);
-                    if (nl === -1) break;
-                    const line = buffer.slice(start, nl);
-                    await handleLine(line);
-                    start = nl + 1;
-                }
-                // Keep only the last incomplete line
-                buffer = buffer.slice(start);
-            }
-            // Last line (ends without a line break)
-            if (buffer) await handleLine(buffer);
-            await flushBatch();
-        } finally {
-            reader.releaseLock();
-        }
+        await flushBatch();
+    } finally {
+        reader.releaseLock();
     }
 }

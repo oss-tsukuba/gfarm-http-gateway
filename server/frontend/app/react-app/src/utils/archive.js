@@ -1,3 +1,4 @@
+import { createLineSplitter } from "@utils/func";
 import { API_URL } from "@utils/config";
 import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
@@ -11,7 +12,7 @@ class Tar(BaseModel):
     options: List[str] | None
 */
 // progressCallback({status, value, message, done, onCancel})
-async function gfptar(
+export default async function gfptar(
     command,
     targetDir,
     targetItems,
@@ -20,104 +21,99 @@ async function gfptar(
     progressCallback,
     refresh
 ) {
-    const dlurl = `${API_URL}/gfptar`;
-
-    console.debug("gfptar", options, command, destDir, "-C", targetDir, targetItems);
-
+    const url = `${API_URL}/gfptar`;
     const controller = new AbortController();
-    const signal = controller.signal;
-    const request = {
+    const isList = command === "list";
+    const listResults = [];
+
+    // expose cancel hook
+    progressCallback?.({
+        onCancel: () => {
+            controller.abort();
+            console.debug("gfptar cancelled:", { command, destDir });
+        },
+    });
+
+    const req = {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             command,
-            basedir: "gfarm:" + targetDir,
+            basedir: `gfarm:${targetDir}`,
             source: targetItems,
-            outdir: "gfarm:" + destDir,
+            outdir: `gfarm:${destDir}`,
             options,
         }),
-        signal,
+        signal: controller.signal,
     };
 
-    progressCallback({
-        onCancel: () => {
-            controller.abort();
-            console.debug("cancel:", destDir);
-        },
-    });
-
     try {
-        const response = await apiFetch(dlurl, request);
+        const response = await apiFetch(url, req);
 
         if (!response.ok) {
-            const error = await response.json();
-            const message = get_error_message(response.status, error.detail);
-            throw new Error(message, {
-                cause: response.status,
-            });
+            // best-effort detail extraction
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            throw new Error(get_error_message(response.status, detail), { cause: response.status });
         }
 
-        const decoder = new TextDecoder("utf-8");
-        const reader = response.body.getReader();
-        let buffer = "";
-        const indirList = [];
+        const handleLine = (line) => {
+            if (!line) return;
+            let json;
+            try {
+                json = JSON.parse(line);
+            } catch (e) {
+                console.warn("Failed to parse line:", line, e);
+                return;
+            }
+            if (json?.error) {
+                throw new Error(`500 ${json.error}`);
+            }
+            if (isList) {
+                listResults.push(String(json.message ?? ""));
+                progressCallback?.({ message: [...listResults] });
+            } else {
+                progressCallback?.({ message: json?.message });
+            }
+        };
+
+        const lineSplitter = createLineSplitter();
+        const reader = response.body
+            .pipeThrough(new TextDecoderStream())
+            .pipeThrough(lineSplitter)
+            .getReader();
 
         try {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                let lines = buffer.split("\n");
-                buffer = lines.pop();
-                for (const line of lines) {
-                    if (line.trim() === "") continue;
-                    try {
-                        const json = JSON.parse(line);
-                        if (json.error) {
-                            throw new Error(`500 ${json.error}`);
-                        }
-                        if (command === "list") {
-                            indirList.push(json.message);
-                            progressCallback({
-                                message: indirList,
-                            });
-                        } else {
-                            progressCallback({
-                                value: undefined,
-                                message: json.message,
-                            });
-                        }
-                    } catch (err) {
-                        console.warn("Failed to parse line:", line, err);
-                    }
-                }
+                handleLine(value);
             }
         } finally {
-            reader.releaseLock();
+            try {
+                reader.releaseLock();
+            } catch {
+                // no-op
+            }
         }
-        progressCallback({
-            status: "completed",
-            value: 100,
-            done: true,
-        });
-        refresh();
+
+        progressCallback?.({ status: "completed", value: 100, done: true });
+        refresh?.();
     } catch (err) {
-        const isAbort = err.name === "AbortError";
-        const message = isAbort ? "Download cancelled" : `${err.name} : ${err.message}`;
-        progressCallback({
-            status: isAbort ? "cancelled" : "error",
-            message,
-            done: true,
-        });
-        if (isAbort) {
-            console.warn("gfptar cancelled", err);
-        } else {
-            console.error("gfptar failed", err);
-        }
+        const isAbort = err?.name === "AbortError";
+        const message = isAbort
+            ? "gfptar cancelled"
+            : `${err?.name ?? "Error"} : ${err?.message ?? "Unknown error"}`;
+        progressCallback?.({ status: isAbort ? "cancelled" : "error", message, done: true });
+        if (isAbort) console.warn("gfptar aborted:", err);
+        else console.error("gfptar failed:", err);
     }
 }
-
-export default gfptar;

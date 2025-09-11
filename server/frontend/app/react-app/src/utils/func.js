@@ -457,3 +457,23 @@ export function closeAllModals() {
     document.body.classList.remove("modal-open");
     document.body.style.removeProperty("paddingRight");
 }
+
+export function createLineSplitter() {
+    return new TransformStream({
+        start() {
+            this.buffer = "";
+        },
+        transform(chunk, controller) {
+            this.buffer += chunk;
+            let idx;
+            while ((idx = this.buffer.indexOf("\n")) !== -1) {
+                const line = this.buffer.slice(0, idx).replace(/\r$/, "");
+                controller.enqueue(line);
+                this.buffer = this.buffer.slice(idx + 1);
+            }
+        },
+        flush(controller) {
+            if (this.buffer) controller.enqueue(this.buffer.replace(/\r$/, ""));
+        },
+    });
+}

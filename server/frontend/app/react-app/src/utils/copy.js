@@ -1,125 +1,140 @@
 import { API_URL } from "@utils/config";
 import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
+import { createLineSplitter } from "@utils/func";
 
+// ---------- helpers ----------
 function getProgress(copied, total) {
-    if (!total || total === 0) return undefined;
-    if (!copied || copied === 0) return undefined;
+    if (!(total > 0) || !(copied > 0)) return undefined;
     return Math.floor((copied / total) * 100);
 }
 
-// progressCallback({status, value, message, done, onCancel})
-async function copyFile(srcpath, destpath, progressCallback) {
-    const dlurl = `${API_URL}/copy`;
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const request = {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-            {
-                source: srcpath,
-                destination: destpath,
-            },
-            null,
-            2
-        ),
-        signal,
-    };
+function formatBps(bytesPerSec) {
+    if (!Number.isFinite(bytesPerSec)) return "- B/s";
+    const units = ["B/s", "KB/s", "MB/s", "GB/s"];
+    let v = bytesPerSec;
+    let i = 0;
+    while (v >= 1024 && i < units.length - 1) {
+        v /= 1024;
+        i += 1;
+    }
+    return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
 
+function coerceMsg(x) {
+    return Array.isArray(x) ? x.join(", ") : String(x ?? "");
+}
+
+// progressCallback({status, value, message, done, onCancel})
+export default async function copyFile(srcpath, destpath, progressCallback) {
+    const url = `${API_URL}/copy`;
+    const ctrl = new AbortController();
     const startTime = Date.now();
-    progressCallback({
+
+    // expose cancel
+    progressCallback?.({
         onCancel: () => {
-            controller.abort();
-            console.debug("cancel:", destpath);
+            ctrl.abort();
+            console.debug("copy: cancelled by user", { destpath });
         },
     });
 
-    try {
-        const response = await apiFetch(dlurl, request);
+    const req = {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: srcpath, destination: destpath }),
+        signal: ctrl.signal,
+    };
 
-        console.debug("response", response);
+    try {
+        const response = await apiFetch(url, req);
+
         if (!response.ok) {
-            const error = await response.json();
-            const message = get_error_message(response.status, error.detail);
-            throw new Error(message);
+            // best-effort detail extraction
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            throw new Error(get_error_message(response.status, detail), { cause: response.status });
         }
 
-        const decoder = new TextDecoder("utf-8");
-        const reader = response.body.getReader();
-        let buffer = "";
+        const lineSplitter = createLineSplitter();
+        const reader = response.body
+            .pipeThrough(new TextDecoderStream())
+            .pipeThrough(lineSplitter)
+            .getReader();
+
         try {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
+                if (!value) continue;
 
-                buffer += decoder.decode(value, { stream: true });
+                let obj;
+                try {
+                    obj = JSON.parse(value);
+                } catch (e) {
+                    console.warn("copy: failed to parse line:", value, e);
+                    continue;
+                }
 
-                let lines = buffer.split("\n");
-                buffer = lines.pop();
-                for (const line of lines) {
-                    if (line.trim() === "") continue;
-                    let json = "";
-                    try {
-                        json = JSON.parse(line);
-                    } catch (err) {
-                        console.warn("Failed to parse line:", line, err);
-                        continue;
-                    }
+                if (obj.warn) {
+                    progressCallback?.({ message: coerceMsg(obj.warn) });
+                }
 
-                    if (json.warn) {
-                        progressCallback({
-                            message: json.warn,
-                        });
-                    }
-                    if (json.error) {
-                        throw new Error(`500 ${json.error}`);
-                    }
-                    if (json.done) {
-                        console.debug("Copy complete", json);
-                        if (!json.warn) progressCallback({ message: "" });
-                        break;
-                    }
-                    const copied = json.copied;
-                    const total = json.total;
-                    if (copied && total) {
-                        const percent = getProgress(copied, total);
-                        const elapsed = Date.now() - startTime; // msec.
-                        const speed = Math.round((copied / elapsed) * 1000);
-                        const sec = Math.floor(elapsed / 1000);
-                        const message = percent
-                            ? `${percent} % | ${sec} sec | ${speed} bytes/sec`
-                            : `${sec} sec | ${speed} bytes/sec`;
-                        progressCallback({
-                            value: percent,
-                            message,
-                        });
-                    }
+                if (obj.error) {
+                    const msg = coerceMsg(obj.error);
+                    progressCallback?.({ status: "error", message: `500 ${msg}`, done: true });
+                    // stop reading further lines
+                    await reader.cancel();
+                    throw new Error(`500 ${msg}`);
+                }
+
+                if (obj.done) {
+                    console.debug("Copy complete", obj);
+                    if (!obj.warn) progressCallback?.({ message: "" });
+                    await reader.cancel(); // short-circuit remaining stream if any
+                    break;
+                }
+
+                const { copied, total } = obj;
+                if (typeof copied === "number" && typeof total === "number") {
+                    const percent = getProgress(copied, total);
+                    const elapsedMs = Date.now() - startTime;
+                    const bps = formatBps(elapsedMs > 0 ? (copied / elapsedMs) * 1000 : 0);
+                    const sec = Math.floor(elapsedMs / 1000);
+                    const message =
+                        percent != null ? `${percent}% | ${sec}s | ${bps}` : `${sec}s | ${bps}`;
+
+                    progressCallback?.({ value: percent, message });
                 }
             }
         } finally {
-            reader.releaseLock();
+            try {
+                reader.releaseLock();
+            } catch {
+                // no-op
+            }
         }
-        progressCallback({
+
+        progressCallback?.({
             status: "completed",
             value: 100,
             done: true,
         });
     } catch (err) {
-        const isAbort = err.name === "AbortError";
-        const message = isAbort ? "Copy cancelled" : `${err.name} : ${err.message}`;
-        progressCallback({
-            status: isAbort ? "cancelled" : "error",
-            message,
-            done: true,
-        });
-        if (isAbort) {
-            console.warn("Copy cancelled", err);
-        } else {
-            console.error("Copy failed", err);
-        }
+        const isAbort = err?.name === "AbortError";
+        const message = isAbort
+            ? "Copy cancelled"
+            : `${err?.name ?? "Error"} : ${err?.message ?? "Unknown error"}`;
+        progressCallback?.({ status: isAbort ? "cancelled" : "error", message, done: true });
+        if (isAbort) console.warn("Copy cancelled", err);
+        else console.error("Copy failed", err);
     }
 }
-
-export default copyFile;
