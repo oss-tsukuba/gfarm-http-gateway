@@ -23,55 +23,62 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
     const abortRef = useRef(null);
     const seenRef = useRef(null);
 
-    const fetchFiles = useCallback(async () => {
-        if (!dirPath) return;
+    // Refs to avoid stale closures
+    const dirRef = useRef(dirPath);
+    useEffect(() => {
+        dirRef.current = dirPath;
+    }, [dirPath]);
 
-        // Cancel previous fetch
-        if (abortRef.current) abortRef.current.abort();
+    const fetchFiles = useCallback(
+        async (path = dirPath) => {
+            if (!path) return;
 
-        const ac = new AbortController();
-        abortRef.current = ac;
-        setLoading(true);
-        setListGetError(null);
-        setItems([]);
-        seenRef.current = new Set();
+            // cancel previous
+            abortRef.current?.abort();
+            const ac = new AbortController();
+            abortRef.current = ac;
 
-        try {
-            await getList(
-                dirPath,
-                showHidden,
-                (batch) => {
-                    // Discard "." ".." and duplicates and project to the minimum required fields
-                    const next = [];
-                    for (const r of Array.isArray(batch) ? batch : [batch]) {
-                        if (!r || r.name === "." || r.name === "..") continue;
-                        const key = r.path ?? r.full_path ?? r.name;
-                        if (seenRef.current.has(key)) continue;
-                        seenRef.current.add(key);
-                        next.push(pickListFields(r));
-                    }
-                    if (next.length) {
-                        setItems((prev) => [...prev, ...next]);
-                    }
-                },
-                ac.signal,
-                batchSize
-            );
+            setLoading(true);
             setListGetError(null);
-            setLoading(false);
-            console.log("getList done");
-        } catch (err) {
-            if (err.name !== "AbortError") {
-                const msg = `${err.name} : ${err.message}`;
-                console.error("listGetError", msg);
-                setListGetError(msg);
+            setItems([]);
+            seenRef.current = new Set();
+
+            try {
+                await getList(
+                    path,
+                    showHidden,
+                    (batch) => {
+                        // Discard "." ".." and duplicates and project to the minimum required fields
+                        const next = [];
+                        for (const r of Array.isArray(batch) ? batch : [batch]) {
+                            if (!r || r.name === "." || r.name === "..") continue;
+                            const key = r.path ?? r.full_path ?? r.name;
+                            if (seenRef.current.has(key)) continue;
+                            seenRef.current.add(key);
+                            next.push(pickListFields(r));
+                        }
+                        if (next.length) setItems((prev) => [...prev, ...next]);
+                    },
+                    ac.signal,
+                    batchSize
+                );
+                setListGetError(null);
+            } catch (err) {
+                if (err.name !== "AbortError") {
+                    const msg = `${err.name} : ${err.message}`;
+                    console.error("listGetError", msg);
+                    setListGetError(msg);
+                }
+            } finally {
+                if (abortRef.current === ac) abortRef.current = null;
+                setLoading(false);
+                console.debug("getList done");
             }
-        } finally {
-            if (abortRef.current === ac) {
-                abortRef.current = null;
-            }
-        }
-    }, [dirPath, showHidden, batchSize]);
+        },
+        [dirPath, showHidden, batchSize]
+    );
+
+    const refreshItems = useCallback(() => fetchFiles(dirRef.current), [fetchFiles]);
 
     useEffect(() => {
         fetchFiles();
@@ -82,7 +89,7 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
         currentItems: items,
         listGetError,
         loading,
-        refreshItems: fetchFiles,
+        refreshItems,
         abort: () => abortRef.current?.abort(),
     };
 }
