@@ -618,6 +618,65 @@ You can run the gateway as a **systemd service** for automatic startup and easie
    ```
 
 
+## File Icons
+
+The Gateway reads `file_icons.json` to decide which icon to display for each file type.
+
+- **How to set this file**:  
+  - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`.  
+  - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after building the Web UI (e.g., after running `make setup`).
+
+- **Default file in the source tree**:
+  - `frontend/app/react-app/public/assets/file_icons.json`  
+
+### Structure
+
+- **category**: maps file extensions to categories  
+  - Example: `"image": ["jpg", "jpeg", "png", "gif"]`  
+  - Extensions should be lowercase and written without the dot.
+- **icons**: maps categories to CSS classes for the icon to display  
+  - Example: `"image": "bi bi-file-earmark-image"`
+- **css**: the URL of the stylesheet required to load the icons  
+  - Example: `"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"`
+
+### Display Rules
+
+- **Folders** always use the icon defined in `icons.folder`.  
+- **Symlinks** (if present) use the icon defined in `icons.symlink`.  
+- **Files** are matched by extension against the categories in `category`.  
+   - If a match is found, the corresponding icon from `icons[category]` is used.  
+   - If no match is found, the `icons.default` class is used.  
+
+### Example
+
+```json
+{
+  "category": {
+    "image": ["jpg", "jpeg", "png", "gif", "svg"],
+    "video": ["mp4", "mov", "avi", "mkv"],
+    "audio": ["mp3", "wav", "flac"],
+    "document": ["doc", "docx", "txt"],
+    "pdf": ["pdf"],
+    "archive": ["zip", "rar", "tar", "gz"],
+    "code": ["js", "ts", "py", "html", "css", "c", "cpp"]
+  },
+  "icons": {
+    "folder": "bi bi-folder-fill",
+    "symlink": "bi bi-link-45deg",
+    "image": "bi bi-file-earmark-image",
+    "video": "bi bi-file-earmark-play",
+    "audio": "bi bi-file-earmark-music",
+    "document": "bi bi-file-earmark-text",
+    "pdf": "bi bi-file-earmark-pdf",
+    "archive": "bi bi-file-earmark-zip",
+    "code": "bi bi-file-earmark-code",
+    "default": "bi bi-file-earmark"
+  },
+  "css": "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+}
+```
+
+
 ## Logging
 
 ### Change log level
