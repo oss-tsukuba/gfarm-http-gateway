@@ -3123,7 +3123,7 @@ async def file_copy(copy_data: FileOperation,
         # final move
         try:
             fresh_env = await set_env(request, authorization)
-            p_mv = await gfmv(fresh_env , tmppath, dest_path)
+            p_mv = await gfmv(fresh_env, tmppath, dest_path)
             stderr_mv = asyncio.create_task(log_stderr("gfmv", p_mv, elist))
             opname = "gfmv"
             log_operation(fresh_env, request.method,

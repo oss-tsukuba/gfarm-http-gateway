@@ -5,6 +5,7 @@ const { expect } = require("@playwright/test");
 
 // ===== CONFIGURATION CONSTANTS =====
 export const FRONTEND_URL = "http://localhost:3000";
+// export const API_URL = FRONTEND_URL;
 export const API_URL = "http://localhost:8080";
 export const ZIPNAME = "files.zip";
 
@@ -782,6 +783,13 @@ export const handleRoute = async (route, request) => {
 
     initializeFileStructureData();
 
+    if (!url.includes("/file/") && (url.endsWith(".js") || url.endsWith(".mjs"))) {
+        return route.fallback();
+    }
+    if (!url.includes("/file/") && url.endsWith(".css")) {
+        return route.fallback();
+    }
+
     // Route to appropriate handler based on URL and method
     if (url.includes("/dir/") && method === "GET") {
         await handleDirGetRoute(route, url, requestUrl);
@@ -805,9 +813,9 @@ export const handleRoute = async (route, request) => {
         await handleAclGetRoute(route, url);
     } else if (url.includes("/acl") && method === "POST") {
         await handleAclPostRoute(route, url);
-    } else if (url.includes("/copy")) {
+    } else if (url.includes("/copy") && method === "POST") {
         await handleCopyRoute(route, url);
-    } else if (url.includes("/move")) {
+    } else if (url.includes("/move") && method === "POST") {
         await handleMoveRoute(route, url);
     } else {
         await route.continue();
