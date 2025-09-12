@@ -713,7 +713,7 @@ You can build and test the gateway inside the **gfarm/docker/dist** developer en
 7. **Access the Web UI**
    
    - Open [http://c2:8000/](http://c2:8000/) in a browser.
-   - You will be redirected to [http://keycloak](http://keycloak) for login.
+   - Click the **Login** button, and you will be redirected to [http://keycloak](http://keycloak).
    - Example login: `user1 / PASSWORD`.
    - The landing page includes API usage examples.
 
