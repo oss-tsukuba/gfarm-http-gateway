@@ -196,7 +196,7 @@ function FileListView({
                         onClick={() => handleItemClick(userInfo.home_directory, false, true)}
                         data-testid="home-button"
                     >
-                        <BsHouse size={"1.1rem"} />
+                        <BsHouse style={{ fontSize: "1.1rem" }} />
                     </button>
                     <div className="d-flex flex-wrap">
                         <div className="btn-group me-4" role="group">

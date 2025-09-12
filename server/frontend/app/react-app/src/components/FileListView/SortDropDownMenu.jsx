@@ -3,6 +3,23 @@ import "@css/FileListView.css";
 import { BsArrowUpShort, BsArrowDownShort } from "react-icons/bs";
 import PropTypes from "prop-types";
 
+export function getSortIcon(name, column, order) {
+    if (column !== name) return null;
+    return order === "asc" ? (
+        <BsArrowUpShort
+            style={{ fontSize: "1.1rem" }}
+            className="ms-1"
+            data-testid="sort-icon-asc"
+        />
+    ) : (
+        <BsArrowDownShort
+            style={{ fontSize: "1.1rem" }}
+            className="ms-1"
+            data-testid="sort-icon-desc"
+        />
+    );
+}
+
 function SortDropDownMenu({ sortDirection, setSortDirection }) {
     const changeSortDirection = ({ column, order }) => {
         setSortDirection((prevSort) => {
@@ -11,15 +28,6 @@ function SortDropDownMenu({ sortDirection, setSortDirection }) {
                 order: order ?? prevSort.order,
             };
         });
-    };
-
-    const getSortIcon = (col) => {
-        if (sortDirection.column !== col) return null;
-        return sortDirection.order === "asc" ? (
-            <BsArrowUpShort size="1.1rem" className="ms-1" data-testid="sort-icon-asc" />
-        ) : (
-            <BsArrowDownShort size="1.1rem" className="ms-1" data-testid="sort-icon-desc" />
-        );
     };
 
     return (
@@ -33,7 +41,7 @@ function SortDropDownMenu({ sortDirection, setSortDirection }) {
                 data-testid="sort-menu-dropdown"
             >
                 Sort by {sortDirection.column}
-                {getSortIcon(sortDirection.column)}
+                {getSortIcon(sortDirection.column, sortDirection.column, sortDirection.order)}
             </button>
             <ul className="dropdown-menu" aria-labelledby="action-menu-dropdown">
                 <li className="text-muted">

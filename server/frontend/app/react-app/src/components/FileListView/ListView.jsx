@@ -2,18 +2,12 @@ import React, { useRef, useEffect, useMemo, useCallback, useState, memo } from "
 import { VList } from "virtua";
 import FileIcon from "@components/FileListView/FileIcon";
 import { ItemMenu } from "@components/FileListView/FileActionMenu";
-import SortDropDownMenu from "@components/FileListView/SortDropDownMenu";
+import SortDropDownMenu, { getSortIcon } from "@components/FileListView/SortDropDownMenu";
 import { formatFileSize, getTimeStr } from "@utils/func";
 import { useViewMode } from "@context/ViewModeContext";
 import { useDateFormat } from "@context/DateFormatContext";
 import "@css/FileListView.css";
-import {
-    BsArrowUpShort,
-    BsArrowDownShort,
-    BsListTask,
-    BsGridFill,
-    BsGrid3X3GapFill,
-} from "react-icons/bs";
+import { BsListTask, BsGridFill, BsGrid3X3GapFill } from "react-icons/bs";
 import { FileItemShape } from "@hooks/useFileList";
 import PropTypes from "prop-types";
 
@@ -204,14 +198,6 @@ function ListView({
             order: prev.column === column && prev.order === "asc" ? "desc" : "asc",
         }));
     };
-    const getSortIcon = (col) =>
-        sortDirection.column === col ? (
-            sortDirection.order === "asc" ? (
-                <BsArrowUpShort size="1.1rem" className="ms-1" data-testid="sort-icon-asc" />
-            ) : (
-                <BsArrowDownShort size="1.1rem" className="ms-1" data-testid="sort-icon-desc" />
-            )
-        ) : null;
 
     // View mode
     const toggleViewMode = (mode) =>
@@ -323,7 +309,7 @@ function ListView({
                     onClick={() => toggleSortDirection("Name")}
                     data-testid="header-name"
                 >
-                    Name {getSortIcon("Name")}
+                    Name {getSortIcon("Name", sortDirection.column, sortDirection.order)}
                 </div>
 
                 <div
@@ -331,7 +317,7 @@ function ListView({
                     onClick={() => toggleSortDirection("Size")}
                     data-testid="header-size"
                 >
-                    Size {getSortIcon("Size")}
+                    Size {getSortIcon("Size", sortDirection.column, sortDirection.order)}
                 </div>
 
                 <div
@@ -339,7 +325,7 @@ function ListView({
                     onClick={() => toggleSortDirection("Modified")}
                     data-testid="header-date"
                 >
-                    Modified {getSortIcon("Modified")}
+                    Modified {getSortIcon("Modified", sortDirection.column, sortDirection.order)}
                 </div>
 
                 <div
