@@ -26,6 +26,28 @@ if (platform === "ios" || platform === "android") {
   installBtn.style.display = "inline-block";
 }
 
+const iosModal = document.createElement("div");
+iosModal.innerHTML = `
+  <div class="modal fade" id="iosModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Install on iOS</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>To install this app on iOS:</p>
+          <ol>
+            <li>Tap the <strong>Share</strong> icon</li>
+            <li>Select <strong>"Add to Home Screen"</strong></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+document.body.appendChild(iosModal.firstElementChild);
+
 installBtn.addEventListener("click", () => {
   if (platform === "android" && deferredPrompt) {
     deferredPrompt.prompt();
