@@ -19,7 +19,7 @@ function NewDirModal({ setShowModal, currentDir, refresh }) {
     }, [visible]);
 
     const handleCreateDir = useCallback(() => {
-        console.log("handleCreateDir dirname", dirname);
+        console.debug("handleCreateDir dirname", dirname);
         if (dirname === "") {
             addNotification(
                 title,
@@ -67,9 +67,8 @@ function NewDirModal({ setShowModal, currentDir, refresh }) {
                 className="form-control"
                 value={dirname}
                 onChange={(e) => {
-                    console.log(e.target.value);
                     setDirname(e.target.value);
-                    console.log("dirname", dirname);
+                    console.debug("dirname", dirname, e.target.value);
                 }}
                 placeholder="Enter directory name"
                 onKeyDown={(e) => {

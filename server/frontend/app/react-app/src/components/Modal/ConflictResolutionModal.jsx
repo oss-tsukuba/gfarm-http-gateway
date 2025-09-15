@@ -39,7 +39,7 @@ function ConflictResolutionModal({
                     if (item.topPath) {
                         const newTopPath = suggestNewName(item.topPath, existingNames);
                         const newPath = item.path.replace(item.topPath, newTopPath);
-                        console.log("newPath", newPath);
+                        console.debug("newPath", newPath);
                         return {
                             ...item,
                             destPath: item.uploadDir.replace(/\/$/, "") + "/" + newPath,

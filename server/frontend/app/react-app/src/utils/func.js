@@ -369,7 +369,7 @@ export const getUniqueConflicts = (incomingItems) => {
     incomingItems.forEach((file) => {
         if (!file) return;
         const key = file.parent_is_conflicted ? getTopPath(file.path) : file.name;
-        console.log("key", key);
+        console.debug("key", key);
         map.set(
             key,
             file.parent_is_conflicted
