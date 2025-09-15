@@ -1,6 +1,7 @@
 import { closeAllModals } from "@utils/func";
 const EXCLUDE_PATHS = [
     /^.*\/login(?:\?.*)?$/,
+    /^.*\/logout(?:\?.*)?$/,
     /^.*\/user_info(?:\?.*)?$/,
     /^.*\/users(?:\?.*)?$/,
     /^.*\/groups(?:\?.*)?$/,
