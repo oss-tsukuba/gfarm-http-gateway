@@ -28,10 +28,16 @@ else
     echo "[WARN] /config/gfarm-http-gateway.conf not found"
 fi
 
-# Custom Icons
+# Custom File Icons
 if [ -f /config/file_icons.json ]; then
   echo "[INFO] /config/file_icons.json found — Copying to Web UI assets"
     cp /config/file_icons.json /app/gfarm-http-gateway/frontend/app/react-app/dist/assets/file_icons.json
+fi
+
+# Custom Login Page
+if [ -f /config/templates/login.html ]; then
+  echo "[INFO] /config/templates/login.html found — Copying to templates"
+    cp /config/templates/login.html /app/gfarm-http-gateway/templates/login.html
 fi
 
 # Trust custom CA

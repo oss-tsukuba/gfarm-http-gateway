@@ -475,34 +475,27 @@ docker compose up -d
 #### Set up the environment
 
 - **Gfarm server environment**
-  Configure SASL XOAUTH2 on the server side. In
-  `$(pkg-config --variable=libdir libsasl2)/sasl2/gfarm.conf`:
-
-  - `mech_list: XOAUTH2`
-    See also: [http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html](http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html)
+  - Configure SASL XOAUTH2 on the gfarm server.
+  - In `$(pkg-config --variable=libdir libsasl2)/sasl2/gfarm.conf`:
+    - `mech_list: XOAUTH2`  
+  - See also: [http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html](http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html)
 
 - **Gfarm client environment**
-  Make sure `gf*` commands and `gfarm2.conf` are available.
-  In `~/.gfarm2rc` (or `<prefix>/etc/gfarm2.conf`):
-
-  - `auth enable sasl` (or `sasl_auth`)
-  - `auth disable <all other methods>`
-  - **Do not** set `sasl_mechanisms` or `sasl_user` manually.
+  - Make sure `gf*` commands and `gfarm2.conf` are available.
+  - In `~/.gfarm2rc` (or `<prefix>/etc/gfarm2.conf`):
+    - `auth enable sasl` (or `sasl_auth`)
+    - `auth disable <all other methods>`
+    - **Do not** set `sasl_mechanisms` or `sasl_user` manually.
 
 - **gfarm-http-gateway requirements**
-
   - On **Ubuntu 24.04 or RHEL (8, 9)**:
-
     - Run `make setup` (runs `setup.sh` with `INSTALL_SYS_PACKAGES=0`) to create a Python venv and install Python/Node.js dependencies.
     - Run `make setup-with-sys-packages` (runs `setup.sh` with `INSTALL_SYS_PACKAGES=1`) if you also want to install required **system packages** (Python, Node.js) automatically.
   - On **other environments**:
-
     - Refer to `setup.sh` for the full list of required packages and install them manually.
   - When using **Pyenv** instead of the system Python:
-
     - Install and configure Pyenv ([https://github.com/pyenv/pyenv](https://github.com/pyenv/pyenv))
     - Example:
-
       ```bash
       pyenv install -v 3.12
       cd gfarm-http-gateway
@@ -512,17 +505,16 @@ docker compose up -d
       ```
 
 - **OpenID Connect provider**
-  Prepare the following values from your IdP (e.g., Keycloak):
-
-  - Client ID and client secret
-  - Valid redirect URI
-  - Logout redirect URI (optional)
+  - Prepare the following values from your IdP (e.g., Keycloak):
+    - Client ID and client secret
+    - Valid redirect URI
+    - Logout redirect URI (optional)
 
 #### Prepare Configuration
 
 See **Configuration variables**
 
-### Start the server
+### Start the gateway
 
 #### Localhost only (127.0.0.1)
 
@@ -567,9 +559,9 @@ make test             # run automated tests
 - May cause high CPU load (auto-reload, detailed logs).
 - Intended for development only.
 
-> Note: `gfarm-http-gateway-dev.sh` is a wrapper around **Uvicorn** to launch the FastAPI app > (`gfarm_http_gateway:app`) in **developer mode**.  
+> Note: `gfarm-http-gateway-dev.sh` is a wrapper around **Uvicorn** to launch the FastAPI app (`gfarm_http_gateway:app`) in **developer mode**.  
 > This script:  
-> - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app > entrypoint).
+> - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app entrypoint).
 > - Runs with `--reload` enabled for automatic code reloading.
 > - Sets log level to **debug** for detailed output.
 > - Binds to all interfaces (`--host 0.0.0.0`).
@@ -618,13 +610,13 @@ You can run the gateway as a **systemd service** for automatic startup and easie
    ```
 
 
-## File Icons
+## Custom File Icons
 
-The Gateway reads `file_icons.json` to decide which icon to display for each file type.
+The gateway reads `file_icons.json` to decide which icon to display for each file type.
 
 - **How to set this file**:  
-  - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`.  
-  - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after building the Web UI (e.g., after running `make setup`).
+  - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`
+  - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after building the gateway (e.g., after running `make setup`)
 
 - **Default file in the source tree**:
   - `frontend/app/react-app/public/assets/file_icons.json`  
@@ -676,6 +668,50 @@ The Gateway reads `file_icons.json` to decide which icon to display for each fil
 }
 ```
 
+## Custom Login Page
+
+The login page is provided as a Jinja2 template (`templates/login.html`).  
+You can replace this file to customize the login screen.  
+
+- **How to set this file**:  
+  - **Docker**: mount your custom template into the container at `/config/templates/login.html`
+  - **Manual installation**: edit or replace `templates/login.html`
+
+### OIDC Login Button
+
+If you override the login page, make sure the login button redirects to the OIDC endpoint, e.g.:
+```html
+<button onclick="location.href='./login_oidc'">
+  Login with OpenID provider
+</button>
+```
+
+Without this redirect, OIDC login will not start.
+
+### SASL/PLAIN (Username/Password) Login Form
+
+To support SASL/PLAIN authentication, provide a form that posts to `./login_passwd` with fields named `username` and `password`, e.g.:
+
+```html
+<form action="./login_passwd" method="post">
+  <input type="text" name="username" placeholder="Username" required />
+  <input type="password" name="password" placeholder="Password" required />
+  <button type="submit">Login with Username/Password</button>
+</form>
+```
+
+Both OIDC and SASL forms can coexist on the same login page.
+
+### Error Notice
+
+The gateway passes error messages to the login template as the Jinja2 variable `{{ error }}`.  
+You can display this message anywhere in your custom template, e.g.:
+
+```html
+<div class="alert alert-danger">
+  {{ error }}
+</div>
+```
 
 ## Logging
 
@@ -692,7 +728,7 @@ The Gateway reads `file_icons.json` to decide which icon to display for each fil
   - See: [https://www.uvicorn.org/settings/#logging](https://www.uvicorn.org/settings/#logging)
 
 ### Change log format
-  Set the `LOGURU_FORMAT` environment variable before starting the server.
+  Set the `LOGURU_FORMAT` environment variable before starting the gateway.
 
   ```bash
   LOGURU_FORMAT="<level>{level}</level>: <level>{message}</level>" ./bin/gfarm-http-gateway.sh

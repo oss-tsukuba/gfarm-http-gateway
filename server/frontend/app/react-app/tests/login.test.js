@@ -10,6 +10,7 @@ let login = false;
 
 // Read login.html once at the start
 const LOGIN_HTML = path.resolve(__dirname, "../../../../templates/login.html");
+const PWA_JS = path.resolve(__dirname, "../../../../static/js/pwa.js");
 const htmlContent = fs.readFileSync(LOGIN_HTML, "utf-8");
 const expectedFilename = "tmp";
 
@@ -92,6 +93,13 @@ async function login_handleRoute(route, request) {
                 location: FRONTEND_URL, // Redirect to some post-login page
             },
             body: "",
+        });
+    } else if (url.includes("pwa.js")) {
+        const jsContent = fs.readFileSync(PWA_JS, "utf-8");
+        await route.fulfill({
+            status: 200,
+            contentType: "application/javascript",
+            body: jsContent,
         });
     } else {
         await route.continue();

@@ -1247,7 +1247,7 @@ async def get_next_url(request: Request,
 async def login_passwd(request: Request,
                        username: str = Form(),
                        password: str = Form(),
-                       csrf_token: str = Form()):
+                       csrf_token: Optional[str] = Form(None)):
     check_csrf(request, csrf_token)
     delete_token(request)
     set_user_passwd(request, username, password)
