@@ -37,7 +37,7 @@ jobs:
 
       - name: Run setup-latest
         working-directory: server
-        run: make setup-latest-for-github-actions
+        run: make setup-latest
 
       - name: Install Playwright browsers
         working-directory: server
