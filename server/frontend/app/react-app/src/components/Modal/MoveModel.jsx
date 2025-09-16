@@ -12,7 +12,7 @@ import { ErrorCodes, get_ui_error } from "@utils/error";
 import { BsArrowBarUp, BsFolder } from "react-icons/bs";
 import PropTypes from "prop-types";
 
-function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refresh }) {
+function MoveModal({ hideModalComponent, currentDir, itemsToMove, setItemsToMove, refresh }) {
     const title = "Move";
     const { showHidden } = useShowHidden();
     const [visible, setVisible] = useState(true);
@@ -34,7 +34,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
 
     useEffect(() => {
         if (itemsToMove.length < 1 && pendingItems.length < 1) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [itemsToMove, pendingItems]);
 
@@ -227,7 +227,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
             </ModalWindow>
             {showConflictModal && (
                 <ConflictResolutionModal
-                    setShowModal={setShowConflictModal}
+                    hideModalComponent={setShowConflictModal}
                     incomingItems={pendingItems}
                     setIncomingItems={setPendingItems}
                     existingNames={currentItems.map((item) => item.name)}
@@ -246,7 +246,7 @@ function MoveModal({ setShowModal, currentDir, itemsToMove, setItemsToMove, refr
 export default MoveModal;
 
 MoveModal.propTypes = {
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     currentDir: PropTypes.string,
     itemsToMove: PropTypes.array,
     setItemsToMove: PropTypes.func,

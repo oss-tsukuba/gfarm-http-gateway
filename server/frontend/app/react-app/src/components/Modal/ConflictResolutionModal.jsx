@@ -11,7 +11,7 @@ import { BsFileEarmark, BsFolder } from "react-icons/bs";
 import PropTypes from "prop-types";
 
 function ConflictResolutionModal({
-    setShowModal,
+    hideModalComponent,
     onConfirm,
     onCancel,
     incomingItems,
@@ -24,7 +24,7 @@ function ConflictResolutionModal({
 
     useEffect(() => {
         if (!visible) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible]);
 
@@ -238,7 +238,7 @@ function ConflictResolutionModal({
 export default ConflictResolutionModal;
 
 ConflictResolutionModal.propTypes = {
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     onConfirm: PropTypes.func,
     onCancel: PropTypes.func,
     incomingItems: PropTypes.array,

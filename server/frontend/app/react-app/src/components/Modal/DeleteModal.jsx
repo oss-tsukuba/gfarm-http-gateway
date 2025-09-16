@@ -5,7 +5,7 @@ import { useOverlay } from "@context/OverlayContext";
 import removeItems from "@utils/remove";
 import PropTypes from "prop-types";
 
-function DeleteModal({ setShowModal, itemsToDelete, setItemsToDelete, refresh }) {
+function DeleteModal({ hideModalComponent, itemsToDelete, setItemsToDelete, refresh }) {
     const title = "Delete";
     const [visible, setVisible] = useState(true);
     const { addNotification } = useNotifications();
@@ -13,7 +13,7 @@ function DeleteModal({ setShowModal, itemsToDelete, setItemsToDelete, refresh })
 
     useEffect(() => {
         if (!visible) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible]);
 
@@ -66,7 +66,7 @@ function DeleteModal({ setShowModal, itemsToDelete, setItemsToDelete, refresh })
 export default DeleteModal;
 
 DeleteModal.propTypes = {
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     itemsToDelete: PropTypes.array,
     setItemsToDelete: PropTypes.func,
     refresh: PropTypes.func,

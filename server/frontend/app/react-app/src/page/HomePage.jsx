@@ -314,7 +314,7 @@ function HomePage() {
             />
             {showDeleteModal && (
                 <DeleteModal
-                    setShowModal={setShowDeleteModal}
+                    hideModalComponent={() => setShowDeleteModal(false)}
                     itemsToDelete={itemsToDelete}
                     setItemsToDelete={setItemsToDelete}
                     refresh={() => {
@@ -330,14 +330,14 @@ function HomePage() {
             )}
             {showNewDirModal && (
                 <NewDirModal
-                    setShowModal={setShowNewDirModal}
+                    hideModalComponent={() => setShowNewDirModal(false)}
                     currentDir={currentDir}
                     refresh={() => refreshItems()}
                 />
             )}
             {showSymlinkModal && (
                 <NewSymlinkModal
-                    setShowModal={setShowSymlinkModal}
+                    hideModalComponent={() => setShowSymlinkModal(false)}
                     currentDir={currentDir}
                     targetItem={lastSelectedItem}
                     refresh={() => refreshItems()}
@@ -345,7 +345,7 @@ function HomePage() {
             )}
             {showRenameModal && (
                 <RenameModal
-                    setShowModal={setShowRenameModal}
+                    hideModalComponent={() => setShowRenameModal(false)}
                     renameItem={lastSelectedItem}
                     refresh={() => {
                         setSelectedItems((prev) =>
@@ -358,7 +358,7 @@ function HomePage() {
             )}
             {showMoveModal && (
                 <MoveModal
-                    setShowModal={setShowMoveModal}
+                    hideModalComponent={() => setShowMoveModal(false)}
                     itemsToMove={itemsToMove}
                     setItemsToMove={setItemsToMove}
                     currentDir={currentDir}
@@ -375,7 +375,7 @@ function HomePage() {
             )}
             {showGfptarModal && (
                 <ArchiveModal
-                    setShowModal={setShowGfptarModal}
+                    hideModalComponent={() => setShowGfptarModal(false)}
                     selectedItems={selectedItems}
                     setSelectedItems={setSelectedItems}
                     lastSelectedItem={lastSelectedItem}

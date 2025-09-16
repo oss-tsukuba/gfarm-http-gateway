@@ -6,7 +6,7 @@ import { checkFileName } from "@utils/func";
 import { ErrorCodes, get_ui_error } from "@utils/error";
 import PropTypes from "prop-types";
 
-function NewDirModal({ setShowModal, currentDir, refresh }) {
+function NewDirModal({ hideModalComponent, currentDir, refresh }) {
     const title = "New Directory";
     const [dirname, setDirname] = useState("");
     const [visible, setVisible] = useState(true);
@@ -14,7 +14,7 @@ function NewDirModal({ setShowModal, currentDir, refresh }) {
 
     useEffect(() => {
         if (!visible) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible]);
 
@@ -86,7 +86,7 @@ export default NewDirModal;
 
 NewDirModal.propTypes = {
     showModal: PropTypes.bool,
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     currentDir: PropTypes.string,
     refresh: PropTypes.func,
 };

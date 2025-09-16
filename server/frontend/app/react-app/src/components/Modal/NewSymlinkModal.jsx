@@ -9,7 +9,7 @@ import { setSymlink } from "@utils/symlink";
 import { ErrorCodes, get_ui_error } from "@utils/error";
 import PropTypes from "prop-types";
 
-function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
+function NewSymlinkModal({ hideModalComponent, currentDir, targetItem, refresh }) {
     const title = "New Symlink";
     const { showHidden } = useShowHidden();
     const [visible, setVisible] = useState(true);
@@ -27,7 +27,7 @@ function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
 
     useEffect(() => {
         if (!visible && !isCreating) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible, isCreating]);
 
@@ -196,7 +196,7 @@ function NewSymlinkModal({ setShowModal, currentDir, targetItem, refresh }) {
 export default NewSymlinkModal;
 
 NewSymlinkModal.propTypes = {
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     currentDir: PropTypes.string,
     targetItem: PropTypes.object,
     refresh: PropTypes.func,

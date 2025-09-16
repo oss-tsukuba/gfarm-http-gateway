@@ -6,7 +6,7 @@ import moveItems from "@utils/move";
 import { ErrorCodes, get_ui_error } from "@utils/error";
 import PropTypes from "prop-types";
 
-function RenameModal({ setShowModal, renameItem, refresh }) {
+function RenameModal({ hideModalComponent, renameItem, refresh }) {
     const title = "Rename";
     const [newName, setNewName] = useState(renameItem?.name || "");
     const [visible, setVisible] = useState(true);
@@ -14,7 +14,7 @@ function RenameModal({ setShowModal, renameItem, refresh }) {
 
     useEffect(() => {
         if (!visible) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible]);
 
@@ -99,7 +99,7 @@ function RenameModal({ setShowModal, renameItem, refresh }) {
 export default RenameModal;
 
 RenameModal.propTypes = {
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     renameItem: PropTypes.object,
     refresh: PropTypes.func,
 };

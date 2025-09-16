@@ -11,7 +11,7 @@ import { ErrorCodes, get_ui_error } from "@utils/error";
 import PropTypes from "prop-types";
 
 function ArchiveModal({
-    setShowModal,
+    hideModalComponent,
     currentDir,
     selectedItems,
     lastSelectedItem,
@@ -38,7 +38,7 @@ function ArchiveModal({
 
     useEffect(() => {
         if (!visible) {
-            setShowModal(false);
+            hideModalComponent();
         }
     }, [visible]);
 
@@ -320,7 +320,7 @@ export default ArchiveModal;
 
 ArchiveModal.propTypes = {
     showModal: PropTypes.bool,
-    setShowModal: PropTypes.func,
+    hideModalComponent: PropTypes.func,
     handleMove: PropTypes.func,
     currentDir: PropTypes.string,
     selectedItems: PropTypes.array,

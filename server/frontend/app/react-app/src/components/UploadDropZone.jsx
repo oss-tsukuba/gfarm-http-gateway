@@ -211,7 +211,7 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
 
             {showConflictModal && (
                 <ConflictResolutionModal
-                    setShowModal={() => setModalState(MODAL_STATES.NONE)}
+                    hideModalComponent={() => setModalState(MODAL_STATES.NONE)}
                     incomingItems={selectedItems}
                     setIncomingItems={setSelectedItems}
                     existingNames={existingItemNames}

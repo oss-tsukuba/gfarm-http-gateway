@@ -141,7 +141,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
             </div>
             {showConfirm && (
                 <ConflictResolutionModal
-                    setShowModal={setShowConfirm}
+                    hideModalComponent={() => setShowConfirm(false)}
                     incomingItems={selectedItems}
                     setIncomingItems={setSelectedItems}
                     existingNames={currentItems.map((item) => item.name)}
