@@ -21,16 +21,19 @@ test-playwright-all:
 	npm --prefix frontend/app/react-app run e2e:all
 
 setup setup-freezed:
-	INSTALL_SYS_PACKAGES=0 ./setup.sh
+	GFARM_INSTALL_CHECK=1 INSTALL_SYS_PACKAGES=0 ./setup.sh
 
 setup-with-sys-packages:
-	INSTALL_SYS_PACKAGES=1 ./setup.sh
+	GFARM_INSTALL_CHECK=1 INSTALL_SYS_PACKAGES=1 ./setup.sh
 
 setup-latest:
-	INSTALL_SYS_PACKAGES=0 ./setup.sh requirements_dev.txt
+	GFARM_INSTALL_CHECK=1 INSTALL_SYS_PACKAGES=0 ./setup.sh requirements_dev.txt
 
 setup-latest-with-sys-packages:
-	INSTALL_SYS_PACKAGES=1 ./setup.sh requirements_dev.txt
+	GFARM_INSTALL_CHECK=1 INSTALL_SYS_PACKAGES=1 ./setup.sh requirements_dev.txt
+
+make setup-latest-for-github-actions:
+	GFARM_INSTALL_CHECK=0 INSTALL_SYS_PACKAGES=0 ./setup.sh requirements_dev.txt
 
 setup-playwright:
 	npx --prefix frontend/app/react-app playwright install --with-deps chromium

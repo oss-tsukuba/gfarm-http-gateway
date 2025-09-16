@@ -7,12 +7,20 @@ source /etc/os-release
 REQUIREMENTS="${1:-requirements.txt}"
 
 INSTALL_SYS_PACKAGES="${INSTALL_SYS_PACKAGES:-0}"
+GFARM_INSTALL_CHECK="${GFARM_INSTALL_CHECK:-1}"
 
 DIR=$(realpath $(dirname $0))
 VENV_DIR="${DIR}/venv"
 PIP="${VENV_DIR}/bin/pip3"
 
 PYTHON=python3
+
+if [ "$GFARM_INSTALL_CHECK" -eq 1 ]; then
+    if ! command -v gfwhoami >/dev/null 2>&1; then
+        echo "[ERROR] gfwhoami not found. Please install gfarm and ensure it is in PATH." >&2
+        exit 1
+    fi
+fi
 
 SUDO() {
     if command -v sudo >/dev/null 2>&1; then
