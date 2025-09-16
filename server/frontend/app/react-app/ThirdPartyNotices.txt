@@ -24,7 +24,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
---- Package: bootstrap@5.3.7 ---
+--- Package: bootstrap@5.3.8 ---
 Repository: https://github.com/twbs/bootstrap
 Publisher: The Bootstrap Authors
 
@@ -349,7 +349,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
---- Package: react-router-dom@7.8.2 ---
+--- Package: react-router-dom@7.9.1 ---
 Repository: https://github.com/remix-run/react-router
 Publisher: Remix Software
 
@@ -378,7 +378,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
---- Package: react-router@7.8.2 ---
+--- Package: react-router@7.9.1 ---
 Repository: https://github.com/remix-run/react-router
 Publisher: Remix Software
 
@@ -486,7 +486,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
---- Package: virtua@0.42.0 ---
+--- Package: virtua@0.43.1 ---
 Repository: https://github.com/inokawa/virtua
 Publisher: inokawa
 
