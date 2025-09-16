@@ -486,7 +486,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
---- Package: virtua@0.43.1 ---
+--- Package: virtua@0.42.0 ---
 Repository: https://github.com/inokawa/virtua
 Publisher: inokawa
 
