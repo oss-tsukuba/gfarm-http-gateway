@@ -701,7 +701,7 @@ Without this redirect, OIDC login will not start.
 
 ### SASL/PLAIN (Username/Password) Login Form
 
-To support SASL/PLAIN authentication, provide a form that posts to `./login_passwd` with fields named `username` and `password`, e.g.:
+To support Gfarm SASL/PLAIN authentication (only available if it is enabled on the Gfarm server), provide a form that posts to `./login_passwd` with fields named `username` and `password`, e.g.:
 
 ```html
 <form action="./login_passwd" method="post">
