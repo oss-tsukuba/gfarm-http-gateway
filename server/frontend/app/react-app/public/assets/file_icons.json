@@ -1,12 +1,41 @@
 {
   "category": {
-    "image": ["jpg", "jpeg", "png", "gif", "svg"],
-    "video": ["mp4", "mov", "avi", "mkv"],
-    "audio": ["mp3", "wav", "flac"],
-    "document": ["doc", "docx", "txt"],
-    "pdf": ["pdf"],
-    "archive": ["zip", "rar", "tar", "gz"],
-    "code": ["js", "ts", "py", "html", "css", "c", "cpp"]
+    "image": [
+      "jpg", "jpeg", "png", "gif", "svg", "bmp", "tiff", "webp", "ico", "heic"
+    ],
+    "video": [
+      "mp4", "mov", "avi", "mkv", "webm", "flv", "wmv", "m4v"
+    ],
+    "audio": [
+      "mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "aiff", "opus"
+    ],
+    "document": [
+      "doc", "docx", "odt", "rtf", "txt", "md", "tex"
+    ],
+    "spreadsheet": [
+      "xls", "xlsx", "ods", "csv", "tsv"
+    ],
+    "presentation": [
+      "ppt", "pptx", "odp", "key"
+    ],
+    "pdf": [
+      "pdf"
+    ],
+    "archive": [
+      "zip", "rar", "tar", "gz", "bz2", "7z", "xz", "iso"
+    ],
+    "code": [
+      "js", "ts", "jsx", "tsx",
+      "py", "rb", "php", "java", "c", "cpp", "cs", "go", "rs",
+      "html", "css", "scss", "less", "xml", "json", "yml", "yaml",
+      "sh", "bat", "pl", "lua", "swift", "kt", "m", "sql"
+    ],
+    "font": [
+      "ttf", "otf", "woff", "woff2", "eot"
+    ],
+    "design": [
+      "psd", "ai", "xd", "sketch", "fig"
+    ]
   },
   "icons": {
     "folder": "bi bi-folder-fill",
@@ -15,9 +44,13 @@
     "video": "bi bi-file-earmark-play",
     "audio": "bi bi-file-earmark-music",
     "document": "bi bi-file-earmark-text",
+    "spreadsheet": "bi bi-file-earmark-spreadsheet",
+    "presentation": "bi bi-file-earmark-slides",
     "pdf": "bi bi-file-earmark-pdf",
     "archive": "bi bi-file-earmark-zip",
     "code": "bi bi-file-earmark-code",
+    "font": "bi bi-file-earmark-font",
+    "design": "bi bi-file-earmark-richtext",
     "default": "bi bi-file-earmark"
   },
   "css": "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
