@@ -11,6 +11,7 @@ const {
     freezeTime,
     toNDJSON,
     handleRoute,
+    mockFileIcons,
     API_URL,
     FRONTEND_URL,
     DIR_LIST,
@@ -24,6 +25,9 @@ let fileStructureData = null;
 test.beforeEach(async ({ context }) => {
     fileStructureData = transformMtimeToUnix(JSON.parse(fs.readFileSync(DIR_LIST, "utf-8")));
     await context.route(`${API_URL}/**`, (route, request) => handleRoute(route, request));
+    await context.route(`${FRONTEND_URL}/assets/file_icons.json`, (route, request) =>
+        mockFileIcons(route, request)
+    );
 });
 // File/Directory Display Test
 

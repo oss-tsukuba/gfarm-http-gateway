@@ -7,7 +7,6 @@ export const loadFileMeta = async () => {
     try {
         const res = await fetch("./assets/file_icons.json");
         if (!res.ok) {
-            console.debug("Failed to load file_icons.json");
             throw new Error("Failed to load file_icons.json");
         }
         console.debug("Load file_icons.json");
@@ -43,7 +42,7 @@ export const getFileCategory = async (ext) => {
 const getFileIconDefault = (ext, is_dir, is_sym) => {
     ext = ext.toLowerCase();
     if (is_dir) {
-        return "bi bi-folder";
+        return "bi bi-folder-fill";
     }
     if (is_sym) {
         return "bi bi-folder-symlink";

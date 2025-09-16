@@ -20,9 +20,14 @@ function App() {
 
     useEffect(() => {
         const loadCSS = async () => {
-            const css = await getIconCSS();
-            loadExternalCss(css);
-            setCssLoading(false);
+            try {
+                const css = await getIconCSS();
+                loadExternalCss(css);
+            } catch {
+                console.log("Failed to load file_icons.json");
+            } finally {
+                setCssLoading(false);
+            }
         };
         loadCSS();
     }, []);

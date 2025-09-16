@@ -821,3 +821,15 @@ export const handleRoute = async (route, request) => {
         await route.continue();
     }
 };
+
+export async function mockFileIcons(route, request) {
+    const url = request.url();
+    if (url.includes("file_icons.json")) {
+        return route.fulfill({
+            status: 404,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "File not found" }),
+        });
+    }
+    return route.fallback();
+}
