@@ -495,7 +495,7 @@ docker compose up -d
     npm --prefix frontend/app/react-app ci
     npm --prefix frontend/app/react-app run build
     ```
-  - **On Ubuntu (22.04, 24.04), Debian 12, or RHEL (8, 9) and compatible (Rocky, AlmaLinux):**
+  - **On Ubuntu 24.04, or RHEL (8, 9) and compatibles (Rocky, AlmaLinux):**
     ```bash
     make setup
     ```
