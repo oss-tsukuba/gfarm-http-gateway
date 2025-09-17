@@ -171,7 +171,7 @@ GFARM_HTTP_TOKEN_STORE=session
 # GFARM_HTTP_REDIS_HOST
 #   Redis server hostname
 #   ex.: GFARM_HTTP_REDIS_HOST=localhost
-GFARM_HTTP_REDIS_HOST=
+GFARM_HTTP_REDIS_HOST=gfarm-redis
 
 # GFARM_HTTP_REDIS_PORT
 #   Redis server port number.

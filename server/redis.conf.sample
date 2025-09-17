@@ -1,18 +1,31 @@
+# Plaintext only
 port 6379
 tls-port 0
+
+# Optional: run in background so you can skip the CLI flag
+# daemonize yes
+
+# Optional persistence (uncomment if needed)
+# dir /tmp/redis-data
+# appendonly yes
+
+# Optional password (only if your gateway supports Redis auth)
+# requirepass change-me
+
+
+# --- TLS settings ---
 
 # Disable plaintext, enable TLS
 # port 0
 # tls-port 6379
 
-# TLS certs
-# tls-ca-cert-file /certs/ca.crt
-# tls-cert-file    /certs/cert.pem
-# tls-key-file     /certs/key.pem
+# Server cert & key (cert should be full chain)
+# tls-cert-file    /certs/redis/cert.pem
+# tls-key-file     /certs/redis/key.pem
 
-# mTLS (set yes if you want client auth)
+# No client certs (no mTLS):
 tls-auth-clients no
 
-# Persistence
-dir /data
-appendonly yes
+# mTLS:
+# tls-ca-cert-file /certs/redis/ca.crt
+# tls-auth-clients yes   # require client certs (mTLS)
