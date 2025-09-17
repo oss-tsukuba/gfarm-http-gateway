@@ -7,8 +7,10 @@ To run gfarm-http-gateway, you need:
   - See: <http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html>  
 - **OpenID Connect provider** (e.g., Keycloak) with client ID, secret, and valid redirect URIs  
 
+
 ## Configuration variables
 
+### gfarm-http-gateway
 `gfarm-http-gateway.conf` is required to run the gateway.  
 Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default).  
 
@@ -19,13 +21,12 @@ The configuration file is organized into the following sections:
 - **Authentication** - TLS and SASL authentication
 - **OpenID Connect** - OIDC and Keycloak settings  
 - **Tokens** - Token verification and validation
-- **Database (Redis)** - Token persistence using Redis
-  - optional; required only when GFARM_HTTP_TOKEN_STORE=database
+- **Database (Redis)** - Refresh token storage settings
 - **Performance** - Performance-related settings
 - **Logging** - Local log file output and rotation settings
 - **Development & Debug** - Debug settings (keep defaults for production)
 
-### How to configure
+#### How to configure
 
 1. Copy the template file
 
@@ -36,9 +37,29 @@ cp gfarm-http-gateway.conf.default gfarm-http-gateway.conf
 2. Edit gfarm-http-gateway.conf and update variables for your environment
 
 
+### Redis
+
+gfarm-http-gateway uses **Redis as a Token Store**.
+
+#### Example redis.conf
+
+Create a working copy and edit as needed:
+
+```bash
+cp redis.conf.sample ./redis.conf
+```
+
+> Keep Redis TLS settings consistent with `gfarm-http-gateway.conf` (Database (Redis) section).
+
+
 ## Quick Start (example using Docker)
 
 Choose one of the following options depending on your environment.
+
+- **Option 1: Run with Docker** - single container, HTTP only.
+- **Option 2: Run Behind NGINX (HTTPS)** - recommended for production (TLS at NGINX).
+- **Option 3: Run Under a Subpath** - host the gateway at a URL prefix (e.g., `/gfarm`).
+- **Option 4: HPCI Shared Storage** — preconfigured Compose setup for HPCI environments.
 
 ### Requirements
 
@@ -52,38 +73,56 @@ Choose one of the following options depending on your environment.
 
 #### 1. Build the Docker Image
 
-Clone the repository and build the image:  
 ```bash
 git clone https://github.com/oss-tsukuba/gfarm-http-gateway.git
 cd gfarm-http-gateway/server
-
 docker build -t gfarm-http-gateway .
 ```
 
 #### 2. Prepare Configuration
 
-Create a `config/` directory in your current working directory with the following files:  
+Create directories and files in your current working directory: 
 ```
 config/
 ├── gfarm2.conf              # Gfarm client configuration (required)
 ├── gfarm-http-gateway.conf  # Gateway configuration (required)
 ├── certs/                   # Gfarm CA certificates (required)
 └── dev_ca.crt               # (Optional) Custom CA certificate (for development)
+
+redis/
+├── redis.conf               # Redis configuration (required)
+└── certs/                   # (Optional) certificates for TLS settings
 ```
 
-In `gfarm2.conf`, you need to set `auth enable sasl` (or `sasl_auth`)
+- gfarm-http-gateway.conf
+  - Refer to **[Configuration variables > gfarm-http-gateway](#configuration-variables)** above
+- redis.conf
+  - Refer to **[Configuration variables > Redis](#configuration-variables)** above
+- gfarm2.conf
+  - set `auth enable sasl` (or `sasl_auth`)
 
-#### 3. Run the container
+#### 3. Run the Redis container
 
 ```bash
-docker run --rm \
+docker network create gfarm-net
+
+docker run -d --name gfarm-redis --network gfarm-net \
+  -v $(pwd)/redis/redis.conf:/config/redis.conf:ro \
+  redis \
+  redis-server /config/redis.conf
+```
+
+#### 4. Run the gfarm-http-gateway container
+
+```bash
+docker run --rm --network gfarm-net \
   -v $(pwd)/config:/config \
   -p 127.0.0.1:8000:8000 \
   gfarm-http-gateway --host 0.0.0.0
 ```
 
 By default, **gfarm-http-gateway** listens on port 8000 inside the container.  
-To use a different port, pass `--port` to the container command and adjust the `-p` mapping:  
+To change ports:  
 ```bash
 docker run --rm \
   -v $(pwd)/config:/config \
@@ -93,16 +132,15 @@ docker run --rm \
 
 > Note:  
 > Port binding:  
-> - `-p 127.0.0.1:8000:8000` → binds the container port to **localhost only**.
->   - This means the gateway is accessible at `http://127.0.0.1:8000` or `http://localhost:8000` **from the host machine only**.
-> - `-p 192.168.1.100:8000:8000` → accessible only from the specified host IP
-> - `-p 8000:8000` → accessible from **all interfaces** (`0.0.0.0:8000`)
->   - Not recommended for production use (exposes unencrypted HTTP to all network clients).
+> - `-p 127.0.0.1:8000:8000` - bind to localhost only
+> - `-p 192.168.1.100:8000:8000` - bind to a specific host IP
+> - `-p 8000:8000` - bind to all interfaces
+>   - Prohibited for production use (exposes unencrypted HTTP to all network clients).
 >
 > `--host 0.0.0.0`:  
 > This makes the gateway listen on all interfaces inside the container. Which interfaces are exposed externally is then controlled by the -p option above.
 
-#### 4. Stop the container
+#### 5. Stop containers
 
 To stop the gateway, press `Ctrl + C` if it's running in the foreground.  
 If you ran it in the background (with `-d`), stop it with:  
@@ -115,12 +153,10 @@ docker stop <id-or-name>
 
 ### Option 2: Run Behind NGINX (HTTPS)
 
-Use NGINX as a reverse proxy in front of **gfarm-http-gateway**.  
-This example uses Docker Compose.  
+Use NGINX as a reverse proxy. This example uses Docker Compose.  
 
 #### 1. Fetch gfarm-http-gateway
 
-Clone the repository:  
 ```bash
 git clone https://github.com/oss-tsukuba/gfarm-http-gateway.git
 cd gfarm-http-gateway/server
@@ -128,7 +164,7 @@ cd gfarm-http-gateway/server
 
 #### 2. Prepare the Configuration
 
-Follow the steps in **Option 1 → 2. Prepare Configuration** for the required `config/` files.  
+Follow the steps in **[Option 1 > 2. Prepare Configuration](#2-prepare-configuration)** for `config/` and `redis/`.  
 
 Place the TLS certificate and key files for NGINX (used for HTTPS termination), e.g.:
 ```bash
@@ -136,28 +172,31 @@ nginx/certs/
 ├── cert.pem   # your server certificate
 └── key.pem    # your private key
 ```
+
 > Note: These are different from the **Gfarm CA certificates** in `config/certs/`.
 >
 > - `config/certs/` → for the gateway to trust Gfarm
 > - `nginx/certs/` → for NGINX to serve HTTPS to clients
 
-Copy the provided sample files:  
+Copy samples and edit: 
 ```bash
 cp docker-compose.yaml.sample docker-compose.yaml
 mkdir nginx
 cp nginx.conf.sample ./nginx/gfarm.conf
 ```
 
-Edit them to match your environment:  
-- In **`docker-compose.yaml`**:
-  - Adjust `--forwarded-allow-ips` to match the subnet of your Docker network
-  - Mount the NGINX config and TLS certificates, e.g.:
-    - `./nginx/gfarm.conf:/etc/nginx/conf.d/gfarm.conf:ro`
-    - `./nginx/certs:/etc/nginx/certs:ro`
-- In **`nginx/gfarm.conf`**:
-  - Point TLS to your NGINX certificates, e.g.:
-    - `ssl_certificate     /etc/nginx/certs/cert.pem;`
-    - `ssl_certificate_key /etc/nginx/certs/key.pem;`
+Edit `docker-compose.yaml`:
+- Adjust `--forwarded-allow-ips` to match the subnet of your Docker network
+- Mount Redis files to Redis container, e.g.:
+  - `./redis/redis.conf:/config/redis.conf:ro`
+- Mount NGINX files to NGINX container, e.g.:
+  - `./nginx/gfarm.conf:/etc/nginx/conf.d/gfarm.conf:ro`
+  - `./nginx/certs:/etc/nginx/certs:ro`
+
+Edit `nginx/gfarm.conf`:
+- Point TLS to your NGINX certificates, e.g.:
+  - `ssl_certificate     /etc/nginx/certs/cert.pem;`
+  - `ssl_certificate_key /etc/nginx/certs/key.pem;`
 
 #### 3. Launch with Docker Compose
 
@@ -166,8 +205,6 @@ docker compose up -d
 ```
 
 #### 4. Stop the Container
-
-To stop all services defined in your Compose file:
 
 ```bash
 docker compose down
@@ -180,9 +217,9 @@ This is useful when you share a domain with other apps behind the same reverse p
 
 #### 1. Set up the gateway
 
-Follow the steps in **Option 1 → 1. Build the Docker Image and 2. Prepare Configuration**.
+Follow the steps in **[Option 1 > 1. Build the Docker Image and 2. Prepare Configuration](#1-build-the-docker-image)**.
 
-(If you're using Docker Compose, instead follow **Option 2 → 1. Fetch gfarm-http-gateway and 2. Prepare the Configuration**.)
+(If you're using Docker Compose, instead follow **[Option 2 > 1. Fetch gfarm-http-gateway and 2. Prepare the Configuration](#1-fetch-gfarm-http-gateway)**.)
 
 #### 2. Start the gateway with a root path
 
@@ -195,7 +232,7 @@ Follow the steps in **Option 1 → 1. Build the Docker Image and 2. Prepare Conf
     gfarm-http-gateway --host 0.0.0.0 --port 8000 --root-path /gfarm
 ```
 
-- **Docker Compose:** update the command for the gateway service:
+- **Docker Compose:** update command
 
   ```yaml
   services:
@@ -215,7 +252,17 @@ If you use NGINX as a reverse proxy, add a `location /gfarm/` block that preserv
 
 #### 3. Stop the container
 
-Follow the steps in **Option 1 or Option 2 → 4. Stop the container**
+- **Docker:**
+```bash
+docker ps            # find the container ID or name
+docker stop <id-or-name>
+```
+
+- **Docker Compose:**
+```bash
+docker compose down
+```
+
 
 ### Option 4: Run in HPCI Shared Storage environment
 
@@ -226,7 +273,7 @@ This option is a preset for HPCI Shared Storage. It expects Docker + Docker Comp
 
 #### 1. Fetch gfarm-http-gateway
 
-Follow the steps in **Option 2 → 1. Fetch gfarm-http-gateway**.  
+Follow the steps in **[Option 2 > 1. Fetch gfarm-http-gateway](#1-fetch-gfarm-http-gateway)**.  
 
 #### 2. Fetch HPCI Shared Storage config and certificate
 
@@ -240,7 +287,6 @@ Run the following script to download HPCI-specific `gfarm2.conf` and CA certific
 For running `gfarm-http-gateway` in the HPCI environment, an example Compose file is provided:  
 [`docker-compose-for-HPCI.yaml`](./docker-compose-for-HPCI.yaml)
 
-Build and Run:
 ```bash
 docker compose -f docker-compose-for-HPCI.yaml up -d --build
 ```
@@ -255,116 +301,6 @@ This setup:
 docker compose -f docker-compose-for-HPCI.yaml down
 ```
 
-
-## Using Redis as the Token Store (with Docker Compose)
-
-This section shows an **example configuration** for enabling Redis as the Token Store.  
-By default, gfarm-http-gateway stores tokens in the HTTP session.  
-
-If the IdP enforces **refresh token rotation (non-reusable refresh tokens)**, then a long-running `gfptar` execution may require the user to re-login when the refresh token expires.
-By enabling **Redis as the Token Store**, the gateway can automatically refresh and update tokens during `gfptar` execution, so the user does not need to re-login.
-
-### 1. Prepare Configuration
-
-#### gfarm-http-gateway Settings
-
-Edit `gfarm-http-gateway.conf`:
-
-```ini
-# Enable to store tokens in Redis instead of in-memory sessions
-GFARM_HTTP_TOKEN_STORE=database
-
-# Redis connection settings (See gfarm-http-gateway.conf.default for details)
-GFARM_HTTP_REDIS_HOST=redis
-GFARM_HTTP_REDIS_PORT=6379
-GFARM_HTTP_REDIS_DB=0
-GFARM_HTTP_REDIS_SSL=no
-GFARM_HTTP_REDIS_SSL_CERTFILE=
-GFARM_HTTP_REDIS_SSL_KEYFILE=
-GFARM_HTTP_REDIS_SSL_CA=
-GFARM_HTTP_REDIS_ID_PREFIX=
-GFARM_HTTP_TOKEN_TTL_MARGIN=86400
-```
-
-##### TLS Settings (Gateway Side)
-
-```ini
-GFARM_HTTP_REDIS_SSL=yes                           # enable TLS
-GFARM_HTTP_REDIS_SSL_CERTFILE=/path/to/client.crt  # client cert for mTLS
-GFARM_HTTP_REDIS_SSL_KEYFILE=/path/to/client.key   # client key for mTLS
-GFARM_HTTP_REDIS_SSL_CA=/path/to/redis/ca.crt      # CA bundle (not needed if CA is trusted by OS)
-```
-
-#### Redis Settings
-
-Copy and edit the provided sample:
-
-```bash
-cp redis.conf.sample ./redis/redis.conf
-```
-
-Example (without TLS):
-```conf
-# Listen on the default Redis port
-port 6379
-
-# Disable TLS
-tls-port 0
-tls-auth-clients no
-
-# Persistence settings
-dir /data
-appendonly yes
-```
-> Note: Use non-TLS Redis only inside a private Docker network. Do not expose Redis publicly without TLS and authentication.
-
-Example (with TLS):
-```conf
-# Disable plaintext, enable TLS
-port 0
-tls-port 6379
-
-# TLS certificates
-tls-ca-cert-file /certs/redis/ca.crt
-tls-cert-file    /certs/redis/cert.pem
-tls-key-file     /certs/redis/key.pem
-
-# mTLS (set yes to require client certificates)
-tls-auth-clients no   # use "yes" to require client certificates (mTLS)
-
-# Data persistence settings
-dir /data
-appendonly yes
-```
-
-### 2. docker-compose.yaml Setup
-
-A sample file is provided (Redis service is commented out):
-[`docker-compose.yaml.sample`](./docker-compose.yaml.sample)
-
-```bash
-cp docker-compose.yaml.sample docker-compose.yaml
-```
-
-Uncomment and edit the Redis section as needed.
-
-### 3. Launch with Docker Compose
-
-Start all services defined in the Compose file:
-
-```bash
-docker compose up -d
-```
-
-### 4. Stop the Containers
-
-To stop all services defined in your Compose file:
-
-```bash
-docker compose down
-```
-
-
 ## Update gfarm-http-gateway and Gfarm client with Docker
 
 ### Update gfarm-http-gateway
@@ -375,38 +311,28 @@ docker compose down
 # Update gfarm-http-gateway repository
 git pull
 
-# Rebuild (Docker)
+# Rebuild 
+# (Docker)
 docker build -t gfarm-http-gateway:latest .
-```
-
-#### Using Docker Compose
-
-```bash
-git pull
+# or (Docker Compose)
 docker compose build
 ```
 
 > Note: If you need a clean rebuild ignoring cache, add `--no-cache`:  
 > `docker build --no-cache -t gfarm-http-gateway:latest .` or `docker compose build --no-cache`.
 
-### Update Gfarm client
-
-You can either pin a released version via `GFARM_VER`, or build from source via `GFARM_SRC_*` args.
+### Update Gfarm client on gfarm-http-gateway
 
 #### Build with a released version
 
 ```bash
-# Build image in the current directory (tag as you like)
 docker build \
-  --build-arg GFARM_VER=2.8.7 \
-  -t gfarm-http-gateway:gfarm-2.8.7 \
+  --build-arg GFARM_VER=2.8.8 \
+  -t gfarm-http-gateway:gfarm-2.8.8 \
   .
 ```
 
 #### Build from Git repository
-
-> Note: When using the Git source build, **set `GFARM_SRC_URL` to an empty string** and pass branch/tag via `GFARM_SRC_GIT_BRANCH`.  
-> `GFARM_SRC_GIT_URL` defaults to `https://github.com/oss-tsukuba/gfarm.git`.  
 
 ```bash
 docker build \
@@ -419,43 +345,31 @@ docker build \
 
 #### Using Docker Compose
 
-1. Set build args in `docker-compose.yaml`:
-
 ```yaml
 services:
   gfarm-http-gateway:
     build:
       context: .
       args:
-        # Option A: use a released version
-        GFARM_VER: "2.8.7"
+        # use a released version
+        GFARM_VER: "2.8.8"
 
-        # Option B: build from source (leave GFARM_SRC_URL empty)
+        # build from source (leave GFARM_SRC_URL empty)
         # GFARM_SRC_URL: ""
         # GFARM_SRC_GIT_URL: "https://github.com/oss-tsukuba/gfarm.git"
         # GFARM_SRC_GIT_BRANCH: "2.8"
 ```
 
-2. Build:
-
-```bash
-docker compose build
-```
-
 ### Restart the container
 
-After rebuilding, restart the running container to apply the update:
-
-- **Docker:**
+Restart after rebuilding:
 
 ```bash
+# Docker
 docker stop <container_id_or_name>
-docker run --rm ...   # same command as before
-```
+docker run --rm ...   # run again with your original args
 
-- **Docker Compose:**
-
-```bash
+# Docker Compose
 docker compose down
 docker compose up -d
 ```
@@ -465,11 +379,12 @@ docker compose up -d
 
 ### Requirements
 
-- Gfarm (clients) 2.8.7 or later
+- Gfarm (clients) 2.8.8 or later
 - Python 3.12 or later
 - venv (python3-venv)
 - GNU Make
 - Node.js v22 or later
+- Redis 7 or later
 
 ### Set up the environment
 
@@ -479,12 +394,13 @@ docker compose up -d
     - `mech_list: XOAUTH2`  
   - See also: [http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html](http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html)
 
-- **Gfarm client environment**
-  - Make sure `gf*` commands and `gfarm2.conf` are available.
-  - In `~/.gfarm2rc` (or `<prefix>/etc/gfarm2.conf`):
-    - `auth enable sasl` (or `sasl_auth`)
-    - `auth disable <all other methods>`
-    - **Do not** set `sasl_mechanisms` or `sasl_user` manually.
+- **Gfarm client environment on gfarm-http-gateway**
+  - Prepare the Gfarm environment **on the same host where gfarm-http-gateway runs**.
+  - Ensure `gf*` commands and a valid `gfarm2.conf` are available.
+  - Create and use a dedicated user for the gateway (e.g. `gfhg`), and configure that user's Gfarm configuration file(e.g. `/home/gfhg/.gfarm2rc`).
+    - set enable to `sasl` with `auth enable sasl`
+    - set disable to all other methods with `auth disable <all other methods>`
+    - Do not set `sasl_mechanisms` or `sasl_user`
 
 - **gfarm-http-gateway requirements**
   - To install Python and Node.js packages and build the Web UI, run:
@@ -495,24 +411,17 @@ docker compose up -d
     npm --prefix frontend/app/react-app ci
     npm --prefix frontend/app/react-app run build
     ```
-  - **On Ubuntu 24.04, or RHEL (8, 9) and compatibles (Rocky, AlmaLinux):**
-    ```bash
-    make setup
-    ```
-    - This runs the above commands to create a Python virtual environment, install required Python packages, and build the Web UI with Node.js.
-    ```bash
-    make setup-with-sys-packages
-    ```
-    - This additionally installs Python (3.12 or later) and Node.js v22 with **nvm** (requires **curl**).
+
   - When using **Pyenv** instead of the system Python:
     - Install and configure Pyenv ([https://github.com/pyenv/pyenv](https://github.com/pyenv/pyenv))
     - Example:
       ```bash
       pyenv install -v 3.12
       cd gfarm-http-gateway
-      make clear-venv
+      make clear-venv # this runs `rm -rf ./venv`
       pyenv local 3.12
-      make setup   # or make setup-latest
+      ...
+      (install Python and Node.js packages)
       ```
 
 - **OpenID Connect provider**
@@ -523,16 +432,39 @@ docker compose up -d
 
 ### Prepare Configuration
 
-See **Configuration variables**
+See **Configuration variables** above.
 
-### Start the gateway
+### Start Redis
+
+#### Replace the system default config
+- Ubuntu/Debian:
+
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y redis-server
+  sudo cp ./redis.conf /etc/redis/redis.conf
+  sudo chown root:root /etc/redis/redis.conf
+  sudo chmod 644 /etc/redis/redis.conf
+  sudo systemctl restart redis-server
+  ```
+
+- RHEL family:
+
+  ```bash
+  sudo dnf install -y redis
+  sudo mkdir -p /etc/redis
+  sudo cp ./redis.conf /etc/redis/redis.conf
+  sudo chown root:root /etc/redis/redis.conf
+  sudo chmod 644 /etc/redis/redis.conf
+  sudo systemctl enable --now redis
+  ```
+
+### Start gfarm-http-gateway
 
 #### Localhost only (127.0.0.1)
 
-Run the gateway for local testing on your own machine:
-
 ```bash
-./bin/gfarm-http-gateway.sh
+./bin/gfarm-http-gateway.sh --port 8000
 ```
 
 - Accessible only from `localhost`.
@@ -541,6 +473,7 @@ Run the gateway for local testing on your own machine:
 > Note: `gfarm-http-gateway.sh` is a wrapper around **Uvicorn** to launch the FastAPI app (`gfarm_http_gateway:app`).  
 > This script:  
 > - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app entrypoint).
+> - Check if gf* commands exist.
 > - Cleans up temporary files in `$GFARM_HTTP_TMPDIR` before starting.
 > - Changes to the project root directory.
 > - Runs Uvicorn with `--proxy-headers` and forwards any extra arguments.
@@ -554,7 +487,7 @@ Expose the gateway to all network interfaces:
 ```
 
 - Useful for quick experiments or testing across machines.
-- **Not recommended for production** (unencrypted HTTP access to everyone).
+- **Prohibited in production** (unencrypted HTTP access to everyone).
 
 #### Developer mode
 
@@ -565,9 +498,7 @@ make test             # run automated tests
 ./bin/gfarm-http-gateway-dev.sh --port 8000
 ```
 
-- Enables debug logging.
-- Listens on all interfaces (`0.0.0.0:8000`).
-- May cause high CPU load (auto-reload, detailed logs).
+- Debug logging, auto-reload, binds `0.0.0.0:8000`.
 - Intended for development only.
 
 > Note: `gfarm-http-gateway-dev.sh` is a wrapper around **Uvicorn** to launch the FastAPI app (`gfarm_http_gateway:app`) in **developer mode**.  
@@ -577,6 +508,35 @@ make test             # run automated tests
 > - Sets log level to **debug** for detailed output.
 > - Binds to all interfaces (`--host 0.0.0.0`).
 > - Uses `--proxy-headers` and forwards any extra arguments.
+
+### Reverse Proxy (required for production)
+
+Run gfarm-http-gateway behind a reverse proxy with HTTPS termination.  
+This section shows an **example configuration** for NGINX.  
+
+1. Install NGINX
+   - RHEL family:
+     ```bash
+     sudo dnf install nginx
+     ```
+
+   - Ubuntu/Debian:
+     ```bash
+     sudo apt-get install nginx
+     sudo rm -f /etc/nginx/sites-enabled/default
+     ```
+
+2. Prepare Configuration
+
+   - Create `/etc/nginx/conf.d/gfarm.conf`  
+   - Use the provided sample [`nginx.conf.sample`](./nginx.conf.sample) as a reference.  
+   - If serving under a path prefix, see **Option 3: Run Under a Subpath** for configuration.
+
+3. Restart NGINX
+
+   ```bash
+   sudo systemctl restart nginx
+   ```
 
 ### Systemd
 
@@ -627,7 +587,7 @@ The gateway reads `file_icons.json` to decide which icon to display for each fil
 
 - **How to set this file**:  
   - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`
-  - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after building the gateway (e.g., after running `make setup`)
+  - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after `npm --prefix frontend/app/react-app run build`.
 
 - **Default file in the source tree**:
   - `frontend/app/react-app/public/assets/file_icons.json`  
@@ -794,7 +754,10 @@ You can build and test the gateway inside the **gfarm/docker/dist** developer en
    make setup-latest-with-sys-packages
    ```
 
-5. **Launch the gateway in c2**
+5. **Set up the Redis in c2**
+
+
+6. **Launch the gateway in c2**
 
    ```bash
    bin/gfarm-http-gateway-dev-for-docker-dist.sh --port 8000
@@ -803,7 +766,7 @@ You can build and test the gateway inside the **gfarm/docker/dist** developer en
    - Running this command starts the gateway in **developer mode** (debug logging, auto reload).
    - Optionally, repeat steps 4-5 in **c3** if you want another gateway instance.
 
-6. **Configure authentication**
+7. **Configure authentication**
 
    - Open the Keycloak admin console: `https://keycloak:8443/auth/admin/master/console/#/HPCI/`
      (login with `admin/admin`).
@@ -816,7 +779,7 @@ You can build and test the gateway inside the **gfarm/docker/dist** developer en
        - `http://c2/*`
    - Save the changes.
 
-7. **Access the Web UI**
+8. **Access the Web UI**
    
    - Open [http://c2:8000/](http://c2:8000/) in a browser.
    - Click the **Login** button, and you will be redirected to [http://keycloak](http://keycloak).
