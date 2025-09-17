@@ -33,12 +33,12 @@ DNF() {
 install_packages_for_debian() {
     # for Ubuntu 24.04
     APTGET update
-    APTGET install -y make python3-minimal python3-pip python3-venv
+    APTGET install -y make python3-minimal python3-pip python3-venv redis-server
 }
 
 install_packages_for_rhel() {
     # for RHEL9 family
-    DNF install -y make python3.12 python3.12-pip
+    DNF install -y make python3.12 python3.12-pip redis
 }
 
 install_python_package() {
