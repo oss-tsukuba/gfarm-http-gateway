@@ -1167,7 +1167,7 @@ async def logout(request: Request,
     check_csrf(request, state)
     delete_token(request)
     delete_user_passwd(request)
-    url = request.url_for("index")
+    url = request.url_for("login_page")
     return RedirectResponse(url=url)
 
 
