@@ -11,7 +11,7 @@ To run gfarm-http-gateway, you need:
 ## Configuration variables
 
 ### gfarm-http-gateway
-`gfarm-http-gateway.conf` is required to run the gateway.  
+`gfarm-http-gateway.conf` is required to run gfarm-http-gateway.  
 Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default).  
 
 The configuration file is organized into the following sections:
@@ -39,17 +39,14 @@ cp gfarm-http-gateway.conf.default gfarm-http-gateway.conf
 
 ### Redis
 
-gfarm-http-gateway uses **Redis as a Token Store**.
-
-#### Example redis.conf
-
+gfarm-http-gateway uses **Redis as a Token Store**.  
 Create a working copy and edit as needed:
 
 ```bash
 cp redis.conf.sample ./redis.conf
 ```
 
-> Keep Redis TLS settings consistent with `gfarm-http-gateway.conf` (Database (Redis) section).
+> Note: Keep Redis TLS settings consistent with `gfarm-http-gateway.conf` (Database (Redis) section).
 
 
 ## Quick Start (example using Docker)
@@ -58,7 +55,7 @@ Choose one of the following options depending on your environment.
 
 - **Option 1: Run with Docker** - single container, HTTP only.
 - **Option 2: Run Behind NGINX (HTTPS)** - recommended for production (TLS at NGINX).
-- **Option 3: Run Under a Subpath** - host the gateway at a URL prefix (e.g., `/gfarm`).
+- **Option 3: Run Under a Subpath** - host gfarm-http-gateway at a URL prefix (e.g., `/gfarm`).
 - **Option 4: HPCI Shared Storage** — preconfigured Compose setup for HPCI environments.
 
 ### Requirements
@@ -69,7 +66,7 @@ Choose one of the following options depending on your environment.
 ### Option 1: Run with Docker
 
 > Note: This example uses HTTP and is not recommended for production use.  
-> For secure deployments, place the gateway behind a reverse proxy with HTTPS enabled.
+> For secure deployments, place gfarm-http-gateway behind a reverse proxy with HTTPS enabled.
 
 #### 1. Build the Docker Image
 
@@ -95,9 +92,9 @@ redis/
 ```
 
 - gfarm-http-gateway.conf
-  - Refer to **[Configuration variables > gfarm-http-gateway](#configuration-variables)** above
+  - Refer to **[Configuration variables > gfarm-http-gateway](#gfarm-http-gateway)** above
 - redis.conf
-  - Refer to **[Configuration variables > Redis](#configuration-variables)** above
+  - Refer to **[Configuration variables > Redis](#redis)** above
 - gfarm2.conf
   - set `auth enable sasl` (or `sasl_auth`)
 
@@ -138,11 +135,11 @@ docker run --rm \
 >   - Prohibited for production use (exposes unencrypted HTTP to all network clients).
 >
 > `--host 0.0.0.0`:  
-> This makes the gateway listen on all interfaces inside the container. Which interfaces are exposed externally is then controlled by the -p option above.
+> This makes gfarm-http-gateway listen on all interfaces inside the container. Which interfaces are exposed externally is then controlled by the -p option above.
 
 #### 5. Stop containers
 
-To stop the gateway, press `Ctrl + C` if it's running in the foreground.  
+To stop gfarm-http-gateway, press `Ctrl + C` if it's running in the foreground.  
 If you ran it in the background (with `-d`), stop it with:  
 
 ```bash
@@ -175,7 +172,7 @@ nginx/certs/
 
 > Note: These are different from the **Gfarm CA certificates** in `config/certs/`.
 >
-> - `config/certs/` → for the gateway to trust Gfarm
+> - `config/certs/` → for gfarm-http-gateway to trust Gfarm
 > - `nginx/certs/` → for NGINX to serve HTTPS to clients
 
 Copy samples and edit: 
@@ -212,16 +209,16 @@ docker compose down
 
 ### Option 3: Run Under a Subpath
 
-Serve the gateway under a URL prefix (e.g., `/gfarm/`).  
+Serve gfarm-http-gateway under a URL prefix (e.g., `/gfarm/`).  
 This is useful when you share a domain with other apps behind the same reverse proxy.
 
-#### 1. Set up the gateway
+#### 1. Set up gfarm-http-gateway
 
 Follow the steps in **[Option 1 > 1. Build the Docker Image and 2. Prepare Configuration](#1-build-the-docker-image)**.
 
 (If you're using Docker Compose, instead follow **[Option 2 > 1. Fetch gfarm-http-gateway and 2. Prepare the Configuration](#1-fetch-gfarm-http-gateway)**.)
 
-#### 2. Start the gateway with a root path
+#### 2. Start gfarm-http-gateway with a root path
 
 - **Docker:**
 
@@ -269,7 +266,7 @@ docker compose down
 This option is a preset for HPCI Shared Storage. It expects Docker + Docker Compose.  
 
 > Note: This example uses HTTP and is not recommended for production use.  
-> For secure deployments, place the gateway behind a reverse proxy with HTTPS enabled.
+> For secure deployments, place gfarm-http-gateway behind a reverse proxy with HTTPS enabled.
 
 #### 1. Fetch gfarm-http-gateway
 
@@ -292,7 +289,7 @@ docker compose -f docker-compose-for-HPCI.yaml up -d --build
 ```
 
 This setup:
-- Mounts `gfarm-http-gateway-for-HPCI.conf` as the gateway configuration
+- Mounts `gfarm-http-gateway-for-HPCI.conf` as gfarm-http-gateway configuration
 - Runs on port 8080 (accessible at `http://localhost:8080`)
 
 #### 4. Stop the container
@@ -397,7 +394,7 @@ docker compose up -d
 - **Gfarm client environment on gfarm-http-gateway**
   - Prepare the Gfarm environment **on the same host where gfarm-http-gateway runs**.
   - Ensure `gf*` commands and a valid `gfarm2.conf` are available.
-  - Create and use a dedicated user for the gateway (e.g. `gfhg`), and configure that user's Gfarm configuration file(e.g. `/home/gfhg/.gfarm2rc`).
+  - Create and use a dedicated user for gfarm-http-gateway (e.g. `gfhg`), and configure that user's Gfarm configuration file (e.g. `/home/gfhg/.gfarm2rc`).
     - set enable to `sasl` with `auth enable sasl`
     - set disable to all other methods with `auth disable <all other methods>`
     - Do not set `sasl_mechanisms` or `sasl_user`
@@ -473,14 +470,14 @@ See **Configuration variables** above.
 > Note: `gfarm-http-gateway.sh` is a wrapper around **Uvicorn** to launch the FastAPI app (`gfarm_http_gateway:app`).  
 > This script:  
 > - Loads common paths from `gfarm-http-gateway-common.sh` (virtual environment, Uvicorn binary, app entrypoint).
-> - Check if gf* commands exist.
+> - Checks if gf* commands exist.
 > - Cleans up temporary files in `$GFARM_HTTP_TMPDIR` before starting.
 > - Changes to the project root directory.
 > - Runs Uvicorn with `--proxy-headers` and forwards any extra arguments.
 
 #### Accessible from any host (0.0.0.0)
 
-Expose the gateway to all network interfaces:
+Expose gfarm-http-gateway to all network interfaces:
 
 ```bash
 ./bin/gfarm-http-gateway.sh --host 0.0.0.0 --port 8000
@@ -491,7 +488,7 @@ Expose the gateway to all network interfaces:
 
 #### Developer mode
 
-Run the gateway with developer settings:
+Run gfarm-http-gateway with developer settings:
 
 ```bash
 make test             # run automated tests
@@ -530,7 +527,7 @@ This section shows an **example configuration** for NGINX.
 
    - Create `/etc/nginx/conf.d/gfarm.conf`  
    - Use the provided sample [`nginx.conf.sample`](./nginx.conf.sample) as a reference.  
-   - If serving under a path prefix, see **Option 3: Run Under a Subpath** for configuration.
+   - If serving under a path prefix, see **[Option 3: Run Under a Subpath](#option-3-run-under-a-subpath)** for configuration.
 
 3. Restart NGINX
 
@@ -540,7 +537,7 @@ This section shows an **example configuration** for NGINX.
 
 ### Systemd
 
-You can run the gateway as a **systemd service** for automatic startup and easier management.
+You can run gfarm-http-gateway as a **systemd service** for automatic startup and easier management.
 
 1. Copy the source tree to a suitable location (e.g., `/opt`):
 
@@ -583,7 +580,7 @@ You can run the gateway as a **systemd service** for automatic startup and easie
 
 ## Custom File Icons
 
-The gateway reads `file_icons.json` to decide which icon to display for each file type.
+gfarm-http-gateway reads `file_icons.json` to decide which icon to display for each file type.
 
 - **How to set this file**:  
   - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`
@@ -675,7 +672,7 @@ Both OIDC and SASL forms can coexist on the same login page.
 
 ### Error Notice
 
-The gateway passes error messages to the login template as the Jinja2 variable `{{ error }}`.  
+gfarm-http-gateway passes error messages to the login template as the Jinja2 variable `{{ error }}`.  
 You can display this message anywhere in your custom template, e.g.:
 
 ```html
@@ -687,7 +684,7 @@ You can display this message anywhere in your custom template, e.g.:
 ## Logging
 
 ### Change log level
-  Use the `--log-level` option when starting the gateway:
+  Use the `--log-level` option when starting gfarm-http-gateway:
 
   ```bash
   ./bin/gfarm-http-gateway.sh --log-level info
@@ -699,7 +696,7 @@ You can display this message anywhere in your custom template, e.g.:
   - See: [https://www.uvicorn.org/settings/#logging](https://www.uvicorn.org/settings/#logging)
 
 ### Change log format
-  Set the `LOGURU_FORMAT` environment variable before starting the gateway.
+  Set the `LOGURU_FORMAT` environment variable before starting gfarm-http-gateway.
 
   ```bash
   LOGURU_FORMAT="<level>{level}</level>: <level>{message}</level>" ./bin/gfarm-http-gateway.sh
@@ -711,7 +708,7 @@ You can display this message anywhere in your custom template, e.g.:
 
 ## API Documentation
 
-The gateway provides interactive API documentation via **Swagger UI**, auto-generated by FastAPI.
+gfarm-http-gateway provides interactive API documentation via **Swagger UI**, auto-generated by FastAPI.
 
 - Open in a browser at:
 
@@ -724,7 +721,7 @@ The gateway provides interactive API documentation via **Swagger UI**, auto-gene
 
 ### Development environment in gfarm/docker/dist
 
-You can build and test the gateway inside the **gfarm/docker/dist** developer environment.
+You can build and test gfarm-http-gateway inside the **gfarm/docker/dist** developer environment.
 
 1. **Set up gfarm/docker/dist**
    Follow `(gfarm source)/docker/dist/README.md` and configure:
@@ -753,17 +750,28 @@ You can build and test the gateway inside the **gfarm/docker/dist** developer en
    cd ~/gfarm/gfarm-http-gateway/server
    make setup-latest-with-sys-packages
    ```
+   > Note: `make setup-latest-with-sys-packages` installs Python 3.12+, Node.js v22 (via nvm), and Redis (server package).
 
 5. **Set up the Redis in c2**
 
+   ```bash
+   # start
+   cp redis.conf.sample ./redis.conf
+   redis-server ./redis.conf --daemonize yes
+ 
+   # check
+   redis-cli -h 127.0.0.1 -p 6379 ping  # → PONG
+   ```
 
-6. **Launch the gateway in c2**
+   > Note: stop redis-server with `redis-cli -h 127.0.0.1 -p 6379 shutdown`
+
+6. **Launch gfarm-http-gateway in c2**
 
    ```bash
    bin/gfarm-http-gateway-dev-for-docker-dist.sh --port 8000
    ```
 
-   - Running this command starts the gateway in **developer mode** (debug logging, auto reload).
+   - Running this command starts gfarm-http-gateway in **developer mode** (debug logging, auto reload).
    - Optionally, repeat steps 4-5 in **c3** if you want another gateway instance.
 
 7. **Configure authentication**
