@@ -624,7 +624,7 @@ async function chmod() {
 
 async function gfptar() {
   const cmd = document.getElementById("gfptar_cmd").value;
-  const base = document.getElementById("gfptar_bace").value;
+  const base = document.getElementById("gfptar_base").value;
   const src = document.getElementById("gfptar_src").value;
   const dest = document.getElementById("gfptar_dest").value;
   const input = document.getElementById("gfptar_input");
