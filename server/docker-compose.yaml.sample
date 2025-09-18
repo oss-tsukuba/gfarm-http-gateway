@@ -16,10 +16,9 @@ services:
       - ./config/certs:/config/certs:ro
     # Optional: Custom development CA (e.g. self-signed root CA)
     # - ./config/dev_ca.crt:/config/dev_ca.crt:ro
-
+    depends_on:
+      - redis
     restart: unless-stopped
-    networks:
-      - gfarm_net
 
 redis:
   image: redis
@@ -38,12 +37,11 @@ redis:
     # If you want to keep data, uncomment the next line and the top-level 'volumes: redis-data:' block.
     # - redis-data:/data
   healthcheck:
-    test: ["CMD", "redis-cli", "--tls", "--cacert", "/certs/ca.crt", "PING"]
-    # test: ["CMD", "redis-cli", "PING"] # for plain
+    test: ["CMD", "redis-cli", "PING"]
+    # test: ["CMD", "redis-cli", "--tls", "--cacert", "/certs/ca.crt", "PING"]  # for TLS
     interval: 10s
     timeout: 3s
     retries: 20
-  networks: [gfarm_net]
   restart: unless-stopped
 
   nginx-proxy:
@@ -57,15 +55,9 @@ redis:
       # Required for HTTPS: TLS server certs/keys for Nginx
       # set to ssl_certificate and ssl_certificate_key in Nginx config
       - ./nginx/certs:/etc/nginx/certs:ro
-    networks:
-      - gfarm_net
     depends_on:
       - gfarm-http-gateway
     restart: unless-stopped
 
 # volumes:
 #   redis-data:
-
-networks:
-  gfarm_net:
-    name: gfarm_net

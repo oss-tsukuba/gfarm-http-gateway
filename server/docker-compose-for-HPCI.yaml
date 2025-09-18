@@ -15,5 +15,19 @@ services:
       - ./config/certs:/config/certs:ro
     ports:
           - "127.0.0.1:8080:8080"
+    depends_on:
+      - redis
     restart: unless-stopped
 
+  redis:
+    image: redis
+    command: ["redis-server", "/config/redis.conf"]
+    volumes:
+      # Required: Redis configuration
+      - ./redis.conf.sample:/config/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped

@@ -30,7 +30,7 @@ GFARM_HTTP_SESSION_SECRET=
 # GFARM_HTTP_SESSION_MAX_AGE
 #   The amount of time a user session remains valid before expiring
 #   value: sec
-GFARM_HTTP_SESSION_MAX_AGE=86400
+GFARM_HTTP_SESSION_MAX_AGE=604800
 
 # ========================================
 # Authentication
@@ -158,13 +158,6 @@ GFARM_HTTP_TOKEN_ISSUERS=
 #   log the claim in access token as username
 GFARM_HTTP_TOKEN_USER_CLAIM=sub
 
-# GFARM_HTTP_TOKEN_STORE
-#   Selects where tokens are stored
-#   value :
-#      session  : tokens are kept in the HTTP session (default)
-#      database : tokens are stored in Database
-GFARM_HTTP_TOKEN_STORE=session
-
 # ========================================
 # Database (Redis)
 # ========================================
@@ -218,7 +211,7 @@ GFARM_HTTP_REDIS_ID_PREFIX=
 #   After this period the token entry is automatically removed.
 #   Set to 0 or leave empty to store without expiry (will be overwritten on refresh).
 #   ex.: GFARM_HTTP_REDIS_TTL=86400
-GFARM_HTTP_REDIS_TTL=86400
+GFARM_HTTP_REDIS_TTL={GFARM_HTTP_SESSION_MAX_AGE}
 
 # GFARM_HTTP_REDIS_USERNAME
 #   username for Redis ACL-based authentication

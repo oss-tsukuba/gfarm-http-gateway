@@ -175,7 +175,6 @@ conf_required_keys = [
     "GFARM_HTTP_SESSION_MAX_AGE",
     "GFARM_HTTP_RECURSIVE_MAX_DEPTH",
     "GFARM_HTTP_TMPDIR",
-    "GFARM_HTTP_TOKEN_STORE"
 ]
 
 # parameters
@@ -261,7 +260,8 @@ TMPDIR = conf.GFARM_HTTP_TMPDIR
 TMPDIR_TOKENS = os.path.join(TMPDIR, "tokens")
 TMPDIR_TARTMP = os.path.join(TMPDIR, "tartmp")
 
-TOKEN_STORE = conf.GFARM_HTTP_TOKEN_STORE  # "session" | "database"
+# always use Redis as Token Store
+TOKEN_STORE = "database"  # "session" | "database"
 if TOKEN_STORE.lower() == "database":
     REDIS_HOST = conf.GFARM_HTTP_REDIS_HOST
     REDIS_PORT = int(conf.GFARM_HTTP_REDIS_PORT)
