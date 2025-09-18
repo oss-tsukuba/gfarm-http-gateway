@@ -11,24 +11,17 @@ async function upload(file, fullPath, dirSet, progressCallback, setError) {
         setError("Upload", get_ui_error([ErrorCodes.EMPTY_PATH]).message);
         return;
     }
+
     const uploadDirPath = file.is_file ? getParentPath(file.destPath) : file.destPath;
     const startTime = Date.now();
-
     const displayPath = fullPath.replace(file.uploadDir + "/", "");
-    const message = `0 % | 0 sec | 0 bytes/sec\n${displayPath}`;
-    progressCallback({ value: 0, message });
+    progressCallback({ value: 0, message: `0 % | 0 sec | 0 bytes/sec\n${displayPath}` });
 
-    // console.debug("uploadDirPath", uploadDirPath);
-    // console.debug("fullPath", fullPath);
-
-    // createDir
     let createDirError = null;
     if (!dirSet.has(uploadDirPath)) {
         createDirError = await createDir(uploadDirPath, "p=on");
         dirSet.add(uploadDirPath);
-        // console.debug("dirSet", dirSet);
     }
-
     if (createDirError) {
         setError(uploadDirPath, createDirError);
         return;
@@ -36,65 +29,82 @@ async function upload(file, fullPath, dirSet, progressCallback, setError) {
 
     const epath = encodePath(fullPath);
     const uploadUrl = `${API_URL}/file` + epath;
-    // console.debug("uploadUrl:", uploadUrl);
 
     try {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", uploadUrl);
         xhr.withCredentials = true;
         xhr.responseType = "json";
+        // timeout
+        // xhr.timeout = 30 * 60 * 1000; // 30 minutes
 
-        xhr.setRequestHeader("Content-Type", file.file.type);
+        if (file.file.type) xhr.setRequestHeader("Content-Type", file.file.type);
         xhr.setRequestHeader("X-File-Timestamp", file.mtime);
+
+        // ---- Progress (upload side) ----
         xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const percent = Math.floor((event.loaded / event.total) * 100);
-                const elapsedTime = Date.now() - startTime; // msec.
-                const speed = Math.round((event.loaded / elapsedTime) * 1000);
-                const sec = Math.floor(elapsedTime / 1000);
-                const value = percent;
-                const message = `${percent} % | ${sec} sec | ${speed} bytes/sec\n${displayPath}`;
-                progressCallback({ value, message });
-                // console.debug("uploaded: %d / %d (%d %)", event.loaded, event.total, percent);
-            }
+            if (!event.lengthComputable) return;
+            const percent = Math.floor((event.loaded / event.total) * 100);
+            const elapsed = Date.now() - startTime; // msec.
+            const speed = Math.round((event.loaded / elapsed) * 1000);
+            const sec = Math.floor(elapsed / 1000);
+            progressCallback({
+                value: percent,
+                message: `${percent} % | ${sec} sec | ${speed} bytes/sec\n${displayPath}`,
+            });
         };
-        return new Promise((resolve, reject) => {
+
+        // ---- Promise wrapper & cancel ----
+        return await new Promise((resolve, reject) => {
+            // expose cancel BEFORE send to avoid race
             progressCallback({
                 onCancel: () => {
-                    xhr.abort();
+                    try {
+                        xhr.abort();
+                    } catch {
+                        console.warn("abort error:", file.name);
+                    }
                     console.warn("cancel:", file.name);
                     reject(new Error("cancelled"));
                 },
             });
+
+            // Success path
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    progressCallback({
-                        // status: "completed", set in handleUpload()
-                        value: 100,
-                        // message: "",         set in handleUpload()
-                        // done: true,          set in handleUpload()
-                    });
+                    progressCallback({ value: 100 });
                     console.debug("Upload: success");
                     resolve();
                 } else {
                     const detail = xhr.response?.detail;
-                    const message = "Error : " + get_error_message(xhr.status, detail);
-                    setError(file.name, message);
-                    console.error(file.name, message);
-                    reject(new Error(message));
+                    const msg = get_error_message(xhr.status, detail);
+                    console.error(file.name, msg);
+                    reject(new Error(msg));
                 }
             };
+
+            // Network-layer failure (RST/offline/proxy)
             xhr.onerror = () => {
-                setError(file.name, "Network error");
-                reject(new Error("Network error"));
+                // status is 0 for network reset / DNS / CORS hard fail
+                reject(new Error("Network Error; Please check your connection and try again."));
             };
+
+            // User or programmatic abort (distinct from network reset)
+            xhr.onabort = () => {
+                console.warn("Upload: cancelled");
+                resolve();
+            };
+
+            // Slow link timeout (if timeout > 0)
+            xhr.ontimeout = () => {
+                reject(new Error("Upload timed out. The connection was too slow or stalled."));
+            };
+
             xhr.send(file.file);
         });
     } catch (error) {
         console.error("Cannot upload:", error);
-        const message = `${error.name} : ${error.message}`;
-        setError(file.name, message);
-        return;
+        setError(file.name, `${error.name} : ${error.message}`);
     }
 }
 

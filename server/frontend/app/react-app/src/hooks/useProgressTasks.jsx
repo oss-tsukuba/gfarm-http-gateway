@@ -107,11 +107,11 @@ function useProgressTasks(refreshItems, addNotification) {
             }
             if (file.uploadDir && !(file.uploadDir in destDirSet)) {
                 const error = await checkPermission(file.uploadDir);
-                destDirSet[file.uploadDir] = error;
                 if (error) {
                     setError("Upload", error);
                     break;
                 }
+                destDirSet[file.uploadDir] = true;
             }
             exec_count++;
             if (!file) continue;
