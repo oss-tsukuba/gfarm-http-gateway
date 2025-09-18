@@ -33,7 +33,7 @@
         </div>
         <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="btn btn-primary w-100">Login</button>
-      </form> -->
+      </form>-->
     </div>
 
     <!-- Install Button, outside the card -->
@@ -46,10 +46,15 @@
   </script>
   <script>
     const errorBox = document.getElementById("error");
-      if ("{{ error }}") {
-        errorBox.textContent = "{{ error }}";
-        errorBox.classList.remove("d-none");
-      }
+    const raw = "{{ error }}";
+    const tmp = document.createElement("textarea");
+    tmp.innerHTML = raw;
+    const decoded = tmp.value;
+
+    if (decoded) {
+      errorBox.textContent = decoded;
+      errorBox.classList.remove("d-none");
+    }
   </script>
   <script src="./static/js/pwa.js"></script>
 </body>

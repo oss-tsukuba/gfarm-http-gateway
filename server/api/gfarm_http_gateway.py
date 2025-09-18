@@ -1096,6 +1096,8 @@ async def user_info(request: Request,
             return JSONResponse(content={"username": name,
                                          "loginname": user,
                                          "home_directory": home_directory})
+        else:
+            request.session["error"] = "Failed to connect to Gfarm"
     raise HTTPException(status_code=401, detail="failed to get user info")
 
 
@@ -2228,6 +2230,10 @@ async def get_username(env):
     await stderr_task
     return_code = await p.wait()
     if return_code != 0:
+        user = get_user_from_env(env)
+        ipaddr = get_client_ip_from_env(env)
+        err = ','.join(elist)
+        logger.error(f"{ipaddr}:0 user={user}, cmd=gfwhoami, {err}")
         return None
     return stdout.rstrip()
 
