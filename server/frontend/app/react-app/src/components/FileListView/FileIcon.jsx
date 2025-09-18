@@ -7,11 +7,16 @@ function FileIcon({ filename, is_dir, is_sym, size, onClick, onDoubleClick }) {
     const extension = filename.split(".").pop();
 
     useEffect(() => {
+        let active = true;
         const loadIcons = async () => {
             const classname = await getFileIcon(extension, is_dir, is_sym);
-            setIconClass(classname);
+            if (active) setIconClass(classname);
         };
         loadIcons();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     return (

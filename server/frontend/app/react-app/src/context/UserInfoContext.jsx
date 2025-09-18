@@ -13,14 +13,21 @@ export function UserInfoProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let active = true;
         const get_username = async () => {
             const data = await get_login_status();
-            setUserInfo(data);
-            setLoading(false);
+            if (active) {
+                setUserInfo(data);
+                setLoading(false);
+            }
             console.debug("user_info", data);
         };
 
         get_username();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     return (

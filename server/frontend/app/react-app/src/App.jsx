@@ -19,6 +19,7 @@ function App() {
     const [cssLoading, setCssLoading] = useState(true);
 
     useEffect(() => {
+        let active = true;
         const loadCSS = async () => {
             try {
                 const css = await getIconCSS();
@@ -26,10 +27,14 @@ function App() {
             } catch {
                 console.log("Failed to load file_icons.json");
             } finally {
-                setCssLoading(false);
+                if (active) setCssLoading(false);
             }
         };
         loadCSS();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     if (cssLoading) {
