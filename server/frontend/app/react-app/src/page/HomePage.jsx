@@ -377,7 +377,7 @@ function HomePage() {
                 <ArchiveModal
                     hideModalComponent={() => setShowGfptarModal(false)}
                     selectedItems={selectedItems}
-                    setSelectedItems={setSelectedItems}
+                    clearSelectedItems={() => setSelectedItems([])}
                     lastSelectedItem={lastSelectedItem}
                     currentDirItems={currentItems}
                     currentDir={currentDir}

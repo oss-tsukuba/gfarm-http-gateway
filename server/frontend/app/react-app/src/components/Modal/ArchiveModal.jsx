@@ -16,7 +16,7 @@ function ArchiveModal({
     selectedItems,
     lastSelectedItem,
     currentDirItems,
-    setSelectedItems,
+    clearSelectedItems,
     setItemForGfptar,
 }) {
     const title = "Gfptar";
@@ -25,16 +25,24 @@ function ArchiveModal({
     const [activeTab, setActiveTab] = useState("archive");
     const [compressMode, setCompressMode] = useState("create");
     const [suggestDir, setSuggestDir] = useState("");
-    const [destDir, setDestDir] = useState(currentDir.replace(/\/$/, "") + "/");
+    const [destDir, setDestDir] = useState("");
     const { currentItems } = useFileList(suggestDir, showHidden);
     const [error, setError] = useState(null);
-    const [targetDir, setTargetDir] = useState(currentDir);
+    const [targetDir, setTargetDir] = useState("");
     const [targetItems, setTargetItems] = useState(selectedItems);
     const [options, setOptions] = useState("");
     const [indirList, setIndirList] = useState([]);
     const [selectedFromList, setSelectedFromList] = useState([]);
     const suggestions = useMemo(() => currentItems.filter((f) => f.is_dir), [currentItems]);
     const { addNotification } = useNotifications();
+
+    useEffect(() => {
+        if (selectedItems.length > 0) {
+            setDestDir(currentDir.replace(/\/$/, "") + "/" + selectedItems[0]?.name + ".gfptar");
+        }
+        setSuggestDir(currentDir);
+        setTargetDir(currentDir);
+    }, []);
 
     useEffect(() => {
         if (!visible) {
@@ -107,7 +115,7 @@ function ArchiveModal({
                 options.split(" ").filter(Boolean)
             );
             setIndirList([]);
-            setSelectedItems([]);
+            clearSelectedItems();
             setOptions("");
             setActiveTab("archive");
         }
@@ -326,6 +334,6 @@ ArchiveModal.propTypes = {
     selectedItems: PropTypes.array,
     lastSelectedItem: PropTypes.object,
     currentDirItems: PropTypes.array,
-    setSelectedItems: PropTypes.func,
+    clearSelectedItems: PropTypes.func,
     setItemForGfptar: PropTypes.func,
 };
