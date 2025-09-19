@@ -198,7 +198,7 @@ function ArchiveModal({
                 </div>
                 {activeTab === "archive" && (
                     <div>
-                        <div className="mb-3 d-flex">
+                        <div className="mb-3 d-flex flex-wrap">
                             <div className="form-label fw-bold me-2">Operation</div>
                             <div className="form-check form-check-inline">
                                 <input
@@ -245,7 +245,7 @@ function ArchiveModal({
                         </div>
                         <div className="mb-3 d-flex">
                             <div className="form-label fw-bold me-4">Base Directory</div>
-                            <div className="form-text">{targetDir}</div>
+                            <div className="form-text text-break">{targetDir}</div>
                         </div>
 
                         <div className="form-label fw-bold">Members</div>
@@ -269,7 +269,7 @@ function ArchiveModal({
                     <div>
                         <div className="mb-2 d-flex">
                             <div className="form-label fw-bold me-4">Input Archive Directory</div>
-                            <div className="form-text">{lastSelectedItem.name}</div>
+                            <div className="form-text text-break">{lastSelectedItem.name}</div>
                         </div>
 
                         <div className="mb-2">
