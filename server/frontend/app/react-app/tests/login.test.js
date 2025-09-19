@@ -59,7 +59,11 @@ async function login_handleRoute(route, request) {
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
-                body: JSON.stringify({ username: "user1", home_directory: "/documents" }),
+                body: JSON.stringify({
+                    username: "user1",
+                    loginname: "user1",
+                    home_directory: "/documents",
+                }),
             });
         } else {
             const responseData = {

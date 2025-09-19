@@ -243,6 +243,11 @@ if verify_path is not None:
     VERIFY_CERT = verify_path  # set to custom CA path
 SASL_MECHANISM_FOR_PASSWORD = conf.GFARM_HTTP_SASL_MECHANISM_FOR_PASSWORD
 ALLOW_ANONYMOUS = str2bool(conf.GFARM_HTTP_ALLOW_ANONYMOUS)
+try:
+    ANONYMOUS_USERNAME = conf.GFARM_HTTP_ANONYMOUS_USERNAME
+except Exception:
+    ANONYMOUS_USERNAME = "Guest"
+
 
 try:
     SESSION_MAX_AGE = int(conf.GFARM_HTTP_SESSION_MAX_AGE)
@@ -1081,7 +1086,6 @@ async def user_info(request: Request,
                     authorization: Union[str, None] = Header(default=None)):
     access_token = await get_access_token(request)
     user = None
-    name = None
     if access_token:
         user = get_user_from_access_token(access_token)
     else:
@@ -1089,15 +1093,34 @@ async def user_info(request: Request,
         if user_passwd:
             user, _ = user_passwd
     if user or authorization:
-        env = await set_env(request, authorization)
-        username = await get_username(env)
-        if username:
-            name, _, home_directory, _ = await gfuser_info(env, username)
-            return JSONResponse(content={"username": name,
-                                         "loginname": user,
-                                         "home_directory": home_directory})
-        else:
+        try:
+            env = await set_env(request, authorization)
+            username = await get_username(env)
+            if username:
+                name, _, home_directory, _ = await gfuser_info(env, username)
+                return JSONResponse(content={"username": name,
+                                             "loginname": user,
+                                             "home_directory": home_directory})
+            else:
+                raise RuntimeError("user not found")
+        except Exception as e:
+            logger.error(f"login error: {str(e)}")
             request.session["error"] = "Failed to connect to Gfarm"
+    elif ALLOW_ANONYMOUS:
+        name = ANONYMOUS_USERNAME
+        try:
+            env = await set_env(request, authorization)
+            username = await get_username(env)
+            if username:
+                _, _, home_directory, _ = await gfuser_info(env, username)
+            else:
+                raise
+        except Exception:
+            home_directory = "/"
+        return JSONResponse(content={"username": name,
+                                     "loginname": user,
+                                     "home_directory": home_directory})
+
     raise HTTPException(status_code=401, detail="failed to get user info")
 
 
@@ -1408,8 +1431,6 @@ async def set_env(request, authorization):
             'GFARM_SASL_PASSWORD': passwd,
         })
     else:  # anonymous
-        # if not ALLOW_ANONYMOUS:
-        #     return None
         user = "anonymous"
         env.update({
             # for Gfarm 2.8.6 or later

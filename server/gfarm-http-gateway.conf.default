@@ -47,6 +47,12 @@ GFARM_HTTP_SASL_MECHANISM_FOR_PASSWORD=PLAIN
 #   value: yes, no
 GFARM_HTTP_ALLOW_ANONYMOUS=no
 
+# GFARM_HTTP_ANONYMOUS_USERNAME
+#   Display name to attach when using anonymous access.
+#   Used for UI messages.
+#   Default: Guest
+GFARM_HTTP_ANONYMOUS_USERNAME=Guest
+
 # ========================================
 # OpenID Connect
 # ========================================

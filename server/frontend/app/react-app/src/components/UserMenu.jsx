@@ -31,7 +31,7 @@ function UserMenu() {
                 </li>
                 <li>
                     <a className="dropdown-item" href={`${API_URL}/logout`}>
-                        Logout
+                        {userInfo?.loginname ? "Logout" : "Login"}
                     </a>
                 </li>
             </ul>
