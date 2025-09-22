@@ -32,6 +32,7 @@ from collections import deque
 import threading
 import stat
 import uuid
+import posixpath
 
 from loguru import logger
 
@@ -344,6 +345,8 @@ try:
         raise
 except Exception:
     LOCAL_LOGFILE_COMPRESSION = None
+
+GFARM_PREFIX = "gfarm"
 
 
 def conf_check_not_recommended():
@@ -1298,6 +1301,8 @@ def get_content_type(filename: str):
 
 
 def fullpath(path: str):
+    if path.startswith(GFARM_PREFIX + ":"):
+        return path
     return "/" + path
 
 
@@ -2360,20 +2365,22 @@ async def get_lsinfo(env, path, depth) -> Gfls_Entry:
             f"Reached maximum symlink follow limit ({depth})")
     existing, is_file, _ = await file_size(env, path)
 
-    if existing:
-        async for entry in gfls_generator(env, path, is_file,
-                                          show_hidden=True):
-            entry.name = os.path.basename(path)
-            if entry.is_sym:
-                if ":" in entry.linkname or \
-                        entry.linkname.startswith("/"):
-                    nextpath = entry.linkname
-                else:
-                    nextpath = os.path.join(
-                        os.path.dirname(path),
-                        entry.linkname)
+    async for entry in gfls_generator(env, path, is_file,
+                                      show_hidden=True):
+        entry.name = os.path.basename(path)
+        if entry.is_sym:
+            if ":" in entry.linkname or \
+                    entry.linkname.startswith("/"):
+                nextpath = entry.linkname
+            else:
+                nextpath = posixpath.normpath(
+                    posixpath.join(os.path.dirname(path),
+                                   entry.linkname))
+            if existing:
                 return await get_lsinfo(env, nextpath, depth + 1)
-            return entry
+            else:
+                raise FileNotFoundError(nextpath)
+        return entry
     raise FileNotFoundError(path)
 
 
