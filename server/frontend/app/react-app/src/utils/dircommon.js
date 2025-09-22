@@ -15,9 +15,17 @@ async function dirCommon(path, method, message, params = null) {
             method: method,
         });
         if (!response.ok) {
-            const error = await response.json();
-            console.debug(`dirCommon: ${error.detail}`);
-            const message = get_error_message(response.status, error.detail);
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            console.debug(`dirCommon: ${detail}`);
+            const message = get_error_message(response.status, detail);
             throw new Error(message);
         }
         console.debug(`dirCommon: Success (${message})`);

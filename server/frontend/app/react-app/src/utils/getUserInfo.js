@@ -4,13 +4,24 @@ import get_error_message from "@utils/error";
 
 export async function get_username() {
     try {
-        const res = await apiFetch(`${API_URL}/c/me`, { method: "GET", credentials: "include" });
-        if (!res.ok) {
-            const error = await res.json();
-            const message = get_error_message(res.status, error.detail);
+        const response = await apiFetch(`${API_URL}/c/me`, {
+            method: "GET",
+            credentials: "include",
+        });
+        if (!response.ok) {
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            const message = get_error_message(response.status, detail);
             throw new Error(message);
         }
-        const data = await res.text();
+        const data = await response.text();
         return data;
     } catch (err) {
         console.error("Error fetching /c/me:", err);
@@ -20,16 +31,24 @@ export async function get_username() {
 
 export async function get_login_status() {
     try {
-        const res = await apiFetch(`${API_URL}/user_info`, {
+        const response = await apiFetch(`${API_URL}/user_info`, {
             method: "GET",
             credentials: "include",
         });
-        if (!res.ok) {
-            const error = await res.json();
-            const message = get_error_message(res.status, error.detail);
+        if (!response.ok) {
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            const message = get_error_message(response.status, detail);
             throw new Error(message);
         }
-        const data = await res.json();
+        const data = await response.json();
         return data;
     } catch (err) {
         console.error("Error fetching /user_info:", err);

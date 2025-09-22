@@ -18,8 +18,16 @@ async function removeItem(path, isFile = true) {
             method: "DELETE",
         });
         if (!response.ok) {
-            const error = await response.json();
-            const message = get_error_message(response.status, error.detail);
+            let detail;
+            try {
+                const ct = response.headers.get("content-type") || "";
+                detail = ct.includes("application/json")
+                    ? (await response.json())?.detail
+                    : await response.text();
+            } catch {
+                // no-op
+            }
+            const message = get_error_message(response.status, detail);
             throw new Error(message);
         }
         console.debug("Success (removed)");

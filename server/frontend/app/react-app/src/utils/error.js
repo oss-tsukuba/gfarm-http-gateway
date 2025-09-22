@@ -1,13 +1,39 @@
 export default function get_error_message(status_code, detail) {
     console.error(status_code, detail);
+    const code = status_code ?? "-";
 
     if (detail === null || detail === undefined) {
-        return `${status_code || "-"} : Error`;
+        return `${code} : Error`;
     }
-    if (detail.message) {
-        return `${status_code || "-"} : ${detail.message} ( ${detail.stdout ? detail.stdout + ", " : ""}${detail.stderr} )`;
+
+    if (typeof detail === "string") {
+        const s = detail.trim();
+        try {
+            detail = JSON.parse(s);
+        } catch {
+            // Not JSON → Display as is
+            return `${code} : ${detail}`;
+        }
     }
-    return `${status_code || "-"} : ${detail}`;
+
+    const buildFromFields = (obj) => {
+        if (obj?.message) {
+            let msg = `${code} : ${obj.message}`;
+            // if (obj?.stdout) msg += ` : stdout: ${obj.stdout}`;
+            // if (obj?.stderr) msg += ` : stderr: ${obj.stderr}`;
+            return msg;
+        }
+        return null;
+    };
+
+    const fromFields = buildFromFields(detail);
+    if (fromFields) return fromFields;
+
+    try {
+        return `${code} : ${JSON.stringify(detail)}`;
+    } catch {
+        return `${code} : ${String(detail)}`;
+    }
 }
 
 export const ErrorCodes = {

@@ -43,7 +43,8 @@ export default async function getList(dirPath, showHidden, setData, signal, batc
             return;
         }
         if (json?.error) {
-            throw new Error(`500 ${json.error}`);
+            const message = get_error_message(json?.err_code || 500, json.error);
+            throw new Error(message);
         }
         batch.push(json);
         if (batch.length >= batchSize) {

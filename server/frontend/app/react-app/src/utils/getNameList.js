@@ -12,11 +12,20 @@ export async function getUsers() {
             const response = await apiFetch(`${API_URL}/users?long_format=on`, {
                 credentials: "include",
             });
-            const data = await response.json();
             if (!response.ok) {
-                const message = get_error_message(response.status, data.detail);
+                let detail;
+                try {
+                    const ct = response.headers.get("content-type") || "";
+                    detail = ct.includes("application/json")
+                        ? (await response.json())?.detail
+                        : await response.text();
+                } catch {
+                    // no-op
+                }
+                const message = get_error_message(response.status, detail);
                 throw new Error(message);
             }
+            const data = await response.json();
             if (data.list) {
                 cachedUsers.users = data.list;
             }
@@ -36,11 +45,20 @@ export async function getGroups() {
             const response = await apiFetch(`${API_URL}/groups`, {
                 credentials: "include",
             });
-            const data = await response.json();
             if (!response.ok) {
-                const message = get_error_message(response.status, data.detail);
+                let detail;
+                try {
+                    const ct = response.headers.get("content-type") || "";
+                    detail = ct.includes("application/json")
+                        ? (await response.json())?.detail
+                        : await response.text();
+                } catch {
+                    // no-op
+                }
+                const message = get_error_message(response.status, detail);
                 throw new Error(message);
             }
+            const data = await response.json();
             if (data.list) {
                 cachedGroups.groups = data.list;
             }

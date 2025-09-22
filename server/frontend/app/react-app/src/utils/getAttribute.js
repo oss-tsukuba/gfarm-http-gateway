@@ -10,11 +10,20 @@ async function getAttribute(filepath, cksum, symlink) {
     const response = await apiFetch(fullpath, {
         credentials: "include",
     });
-    const json = await response.json();
     if (!response.ok) {
-        const message = get_error_message(response.status, json.detail);
+        let detail;
+        try {
+            const ct = response.headers.get("content-type") || "";
+            detail = ct.includes("application/json")
+                ? (await response.json())?.detail
+                : await response.text();
+        } catch {
+            // no-op
+        }
+        const message = get_error_message(response.status, detail);
         throw new Error(message);
     }
+    const json = await response.json();
     return json;
 }
 

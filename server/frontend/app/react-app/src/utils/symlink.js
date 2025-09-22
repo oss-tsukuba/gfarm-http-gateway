@@ -10,8 +10,16 @@ async function getSymlink(symlink, get_fullpath) {
         credentials: "include",
     });
     if (!response.ok) {
-        const error = await response.json();
-        const message = get_error_message(response.status, error.detail);
+        let detail;
+        try {
+            const ct = response.headers.get("content-type") || "";
+            detail = ct.includes("application/json")
+                ? (await response.json())?.detail
+                : await response.text();
+        } catch {
+            // no-op
+        }
+        const message = get_error_message(response.status, detail);
         throw new Error(message);
     }
     const data = await response.json();
@@ -27,8 +35,16 @@ async function setSymlink(source, destination) {
         body: JSON.stringify({ source, destination }),
     });
     if (!response.ok) {
-        const error = await response.json();
-        const message = get_error_message(response.status, error.detail);
+        let detail;
+        try {
+            const ct = response.headers.get("content-type") || "";
+            detail = ct.includes("application/json")
+                ? (await response.json())?.detail
+                : await response.text();
+        } catch {
+            // no-op
+        }
+        const message = get_error_message(response.status, detail);
         throw new Error(message);
     }
     return "";
