@@ -75,7 +75,14 @@ export default async function gfptar(
                 return;
             }
             if (json?.error) {
-                throw new Error(`500 ${json.error}`);
+                if (Array.isArray(json.error)) {
+                    const joined = json.error
+                        .map((e) => e?.msg || e?.message || String(e))
+                        .join("; ");
+                    throw new Error(`500 ${joined}`);
+                } else {
+                    throw new Error(`500 ${json.error}`);
+                }
             }
             if (isList) {
                 listResults.push(String(json.message ?? ""));
@@ -112,7 +119,12 @@ export default async function gfptar(
         const message = isAbort
             ? "gfptar cancelled"
             : `${err?.name ?? "Error"} : ${err?.message ?? "Unknown error"}`;
-        progressCallback?.({ status: isAbort ? "cancelled" : "error", message, done: true });
+        progressCallback?.({
+            value: 100,
+            status: isAbort ? "cancelled" : "error",
+            message,
+            done: true,
+        });
         if (isAbort) console.warn("gfptar aborted:", err);
         else console.error("gfptar failed:", err);
     }

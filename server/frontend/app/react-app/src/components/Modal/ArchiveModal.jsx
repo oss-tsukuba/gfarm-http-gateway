@@ -123,7 +123,7 @@ function ArchiveModal({
 
     const handleConfirm = () => {
         if (activeTab === "archive" && compressMode === "create") {
-            if (!checkFileName(getFileName(destDir))) {
+            if (!checkFileName(getFileName(destDir.replace(/\/$/, "")))) {
                 addNotification(
                     title,
                     get_ui_error([ErrorCodes.INVALID_NAME]).message,

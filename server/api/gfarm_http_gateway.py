@@ -3604,7 +3604,8 @@ async def archive_files(
     if not first_byte:
         await stderr_task
         code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        message = f"Failed to execute: gfptar {' '.join(args)}"
+        error = elist[-1] if len(elist) > 0 else ""
+        message = f"Failed to execute: gfptar {' '.join(args)} : {error}"
         stdout = ""
         raise gfarm_http_error(opname, code, message, stdout, elist)
 
@@ -3636,9 +3637,10 @@ async def archive_files(
             if return_code != 0:
                 stdout = buffer.decode("utf-8", errors="replace").strip()
                 logger.error(
-                    f"{ipaddr}:0 user={user}, cmd={opname}, {stdout} {elist}")
+                    f"{ipaddr}:0 user={user}, cmd={opname}, "
+                    f"stdout={stdout}, elist={elist}")
                 j_line = json.dumps({"message": stdout,
-                                     "error": ','.join(elist)})
+                                     "error": elist})
                 yield j_line + '\n'
         except asyncio.CancelledError:
             p.terminate()
