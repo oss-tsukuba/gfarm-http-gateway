@@ -1,7 +1,25 @@
+import { GFARM_PREFIX } from "@utils/config";
+
 export const encodePath = (path) => {
     let p = "/" + path.replace(/^\/+/, "").replace(/\/+$/, "");
     // URL encode without slash
     return p.replace(/[^/]/g, encodeURIComponent);
+};
+
+export const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export const normalizeGfarmUrl = (path) => {
+    if (!path) return path;
+
+    const pfx = typeof GFARM_PREFIX !== "undefined" ? GFARM_PREFIX : "gfarm";
+    const reHasSchemePrefix = new RegExp(`^${escapeRegExp(pfx)}:`, "i");
+    const reEmptyAuthorityScheme = new RegExp(`^${escapeRegExp(pfx)}:///`, "i");
+    const reAuthorityScheme = new RegExp(`^${escapeRegExp(pfx)}://`, "i");
+
+    if (!reHasSchemePrefix.test(path)) return path;
+    if (reEmptyAuthorityScheme.test(path)) return path.replace(reEmptyAuthorityScheme, "/");
+    if (reAuthorityScheme.test(path)) return "/" + path;
+    return path.replace(reHasSchemePrefix, "");
 };
 
 export const getParentPath = (path) => {

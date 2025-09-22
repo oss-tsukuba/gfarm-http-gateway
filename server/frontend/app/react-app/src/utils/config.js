@@ -3,3 +3,4 @@ export const FETCH_INTERVAL = parseInt(import.meta.VITE_API_CACHE_AGE) || 60000;
 export const PARALLEL_LIMIT = parseInt(import.meta.VITE_API_PARALLEL_LIMIT) || 3;
 export const ROUTE_STORAGE = "/ui";
 export const ROUTE_DOWNLOAD = "/dl";
+export const GFARM_PREFIX = "gfarm";

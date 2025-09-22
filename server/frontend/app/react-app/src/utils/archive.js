@@ -1,5 +1,5 @@
 import { createLineSplitter } from "@utils/func";
-import { API_URL } from "@utils/config";
+import { API_URL, GFARM_PREFIX } from "@utils/config";
 import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
 
@@ -40,9 +40,9 @@ export default async function gfptar(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             command,
-            basedir: `gfarm:${targetDir}`,
+            basedir: `${GFARM_PREFIX}:${targetDir}`,
             source: targetItems,
-            outdir: `gfarm:${destDir}`,
+            outdir: `${GFARM_PREFIX}:${destDir}`,
             options,
         }),
         signal: controller.signal,

@@ -22,7 +22,7 @@ import { useNotifications } from "@context/NotificationContext";
 import { ROUTE_STORAGE } from "@utils/config";
 import displayFile from "@utils/display";
 import { getSymlink } from "@utils/symlink";
-import { getParentPath } from "@utils/func";
+import { getParentPath, normalizeGfarmUrl } from "@utils/func";
 import { ErrorCodes, get_ui_error } from "@utils/error";
 import LoginPage from "@page/LoginPage";
 import ErrorPage from "@page/ErrorPage";
@@ -65,6 +65,19 @@ function HomePage() {
     const [showGfptarModal, setShowGfptarModal] = useState(false);
     const [showSidePanel, setShowSidePanel] = useState({ show: false, tab: "detail" });
 
+    const jumpDirectory = useCallback(
+        (newdir) => {
+            console.debug("jumpDirectory", newdir);
+            const path = normalizeGfarmUrl(newdir);
+            if (currentDir === path) {
+                refreshItems();
+            } else {
+                navigate(pathHead + path);
+            }
+        },
+        [currentDir, pathHead, navigate]
+    );
+
     useEffect(() => {
         setSelectedItems((prev) =>
             prev.filter((selected) => currentItems.some((item) => item.path === selected.path))
@@ -73,7 +86,7 @@ function HomePage() {
             if (currentDir === currentItems[0].path) {
                 setLastSelectedItem(currentItems[0]);
                 setSelectedItems([currentItems[0]]);
-                navigate(pathHead + getParentPath(currentDir));
+                jumpDirectory(getParentPath(currentDir));
                 setShowSidePanel({ show: true, tab: "detail" });
             }
         }
@@ -90,17 +103,6 @@ function HomePage() {
             setShowMoveModal(true);
         }
     }, [itemsToMove]);
-
-    const jumpDirectory = useCallback(
-        (newdir) => {
-            if (currentDir === newdir) {
-                refreshItems();
-            } else {
-                navigate(pathHead + newdir);
-            }
-        },
-        [currentDir, pathHead, navigate]
-    );
 
     const handleDisplayFile = useCallback((path) => {
         displayFile(path);
