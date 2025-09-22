@@ -18,7 +18,6 @@ import { useUserInfo } from "@context/UserInfoContext";
 import "@css/FileListView.css";
 import { BsHouse } from "react-icons/bs";
 import { FileItemShape } from "@hooks/useFileList";
-import useCloseOthersOnToggle from "@hooks/useCloseOthersOnToggle";
 import PropTypes from "prop-types";
 
 function FileListView({
@@ -66,9 +65,35 @@ function FileListView({
         x: 0,
         y: 0,
         item: null,
+        source: null,
     });
 
-    useCloseOthersOnToggle();
+    const openContextMenu = useCallback(
+        (x, y, item, source) => {
+            if (contextMenu.show) {
+                closeContextMenu();
+                requestAnimationFrame(() => setContextMenu({ show: true, x, y, item, source }));
+            } else {
+                setContextMenu({ show: true, x, y, item, source });
+            }
+        },
+        [setContextMenu]
+    );
+
+    const closeContextMenu = useCallback(
+        () =>
+            setContextMenu({
+                show: false,
+                x: 0,
+                y: 0,
+                item: null,
+                source: null,
+            }),
+        [setContextMenu]
+    );
+
+    const isButtonMenuOpenFor = (it) =>
+        !!contextMenu && contextMenu.source === "button" && contextMenu.item?.path === it.path;
 
     useEffect(() => {
         setSelectedItems([]);
@@ -242,7 +267,9 @@ function FileListView({
                         handleSelectAll={handleSelectAll}
                         sortDirection={sortDirection}
                         setSortDirection={setSortDirection}
-                        setContextMenu={setContextMenu}
+                        openContextMenu={openContextMenu}
+                        closeContextMenu={closeContextMenu}
+                        isButtonMenuOpenFor={isButtonMenuOpenFor}
                     />
                 ) : (
                     <IconView
@@ -258,7 +285,9 @@ function FileListView({
                         handleSelectAll={handleSelectAll}
                         sortDirection={sortDirection}
                         setSortDirection={setSortDirection}
-                        setContextMenu={setContextMenu}
+                        openContextMenu={openContextMenu}
+                        closeContextMenu={closeContextMenu}
+                        isButtonMenuOpenFor={isButtonMenuOpenFor}
                     />
                 )}
             </div>
@@ -267,8 +296,8 @@ function FileListView({
                     x={contextMenu.x}
                     y={contextMenu.y}
                     item={contextMenu.item}
-                    actions={ItemMenuActions} // or whatever actions you pass
-                    onClose={() => setContextMenu((prev) => ({ ...prev, show: false }))}
+                    actions={ItemMenuActions}
+                    onClose={() => closeContextMenu()}
                 />
             )}
         </div>

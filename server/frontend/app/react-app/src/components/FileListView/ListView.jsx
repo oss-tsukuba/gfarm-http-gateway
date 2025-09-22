@@ -22,10 +22,12 @@ const RowView = memo(function RowView({
     isSelected,
     isLastSelected,
     dateFormat,
-    ItemMenuActions,
     onClick,
     onDoubleClick,
     onContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    isButtonMenuOpenFor,
 }) {
     return (
         <div
@@ -70,7 +72,12 @@ const RowView = memo(function RowView({
             <div className="text-nowrap">{getTimeStr(item.mtime, dateFormat)}</div>
 
             <div onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-                <ItemMenu item={item} actions={ItemMenuActions} />
+                <ItemMenu
+                    item={item}
+                    isOpen={isButtonMenuOpenFor(item)}
+                    onOpen={openContextMenu}
+                    onClose={closeContextMenu}
+                />
             </div>
         </div>
     );
@@ -82,10 +89,12 @@ const RowSmView = memo(function RowSmView({
     isSelected,
     isLastSelected,
     dateFormat,
-    ItemMenuActions,
     onClick,
     onDoubleClick,
     onContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    isButtonMenuOpenFor,
 }) {
     return (
         <div
@@ -143,7 +152,12 @@ const RowSmView = memo(function RowSmView({
                 </div>
 
                 <div>
-                    <ItemMenu item={item} actions={ItemMenuActions} />
+                    <ItemMenu
+                        item={item}
+                        isOpen={isButtonMenuOpenFor(item)}
+                        onOpen={openContextMenu}
+                        onClose={closeContextMenu}
+                    />
                 </div>
             </div>
         </div>
@@ -162,7 +176,9 @@ function ListView({
     handleSelectAll,
     sortDirection,
     setSortDirection,
-    setContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    isButtonMenuOpenFor,
 }) {
     const headerCheckboxRef = useRef(null);
     const desktopListRef = useRef(null);
@@ -271,9 +287,9 @@ function ListView({
     const onRowCtx = useCallback(
         (e, item) => {
             e.preventDefault();
-            setContextMenu({ show: true, x: e.pageX, y: e.pageY, item });
+            openContextMenu(e.pageX, e.pageY, item, "contextmenu");
         },
-        [setContextMenu]
+        [openContextMenu]
     );
 
     // Desktop header
@@ -420,6 +436,9 @@ function ListView({
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
                                         onContextMenu={(e) => onRowCtx(e, item)}
+                                        openContextMenu={openContextMenu}
+                                        closeContextMenu={closeContextMenu}
+                                        isButtonMenuOpenFor={isButtonMenuOpenFor}
                                     />
                                 </div>
                             );
@@ -468,6 +487,9 @@ function ListView({
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
                                         onContextMenu={(e) => onRowCtx(e, item)}
+                                        openContextMenu={openContextMenu}
+                                        closeContextMenu={closeContextMenu}
+                                        isButtonMenuOpenFor={isButtonMenuOpenFor}
                                     />
                                 </div>
                             );
@@ -496,7 +518,9 @@ ListView.propTypes = {
         order: PropTypes.oneOf(["asc", "desc"]),
     }).isRequired,
     setSortDirection: PropTypes.func.isRequired,
-    setContextMenu: PropTypes.func.isRequired,
+    openContextMenu: PropTypes.func.isRequired,
+    closeContextMenu: PropTypes.func.isRequired,
+    isButtonMenuOpenFor: PropTypes.func.isRequired,
 };
 
 RowView.propTypes = {
@@ -504,10 +528,12 @@ RowView.propTypes = {
     isSelected: PropTypes.bool.isRequired,
     isLastSelected: PropTypes.bool,
     dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
-    ItemMenuActions: PropTypes.array, // or shape(...) if you have a strict action type
     onClick: PropTypes.func.isRequired,
     onDoubleClick: PropTypes.func.isRequired,
     onContextMenu: PropTypes.func.isRequired,
+    openContextMenu: PropTypes.func.isRequired,
+    closeContextMenu: PropTypes.func.isRequired,
+    isButtonMenuOpenFor: PropTypes.func.isRequired,
 };
 
 RowView.defaultProps = {
@@ -520,10 +546,12 @@ RowSmView.propTypes = {
     isSelected: PropTypes.bool.isRequired,
     isLastSelected: PropTypes.bool,
     dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
-    ItemMenuActions: PropTypes.array,
     onClick: PropTypes.func.isRequired,
     onDoubleClick: PropTypes.func.isRequired,
     onContextMenu: PropTypes.func.isRequired,
+    openContextMenu: PropTypes.func.isRequired,
+    closeContextMenu: PropTypes.func.isRequired,
+    isButtonMenuOpenFor: PropTypes.func.isRequired,
 };
 
 RowSmView.defaultProps = {

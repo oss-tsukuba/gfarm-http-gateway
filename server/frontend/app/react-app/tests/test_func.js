@@ -51,7 +51,7 @@ export async function clickMenuItemFromView(page, filename, action) {
     await expect(menuButton).toBeVisible();
     await menuButton.click();
 
-    const actionButton = fileRow
+    const actionButton = page
         .locator(".dropdown-menu")
         .locator(`[data-testid="${action}-menu-${filename}"]`);
     await expect(actionButton).toBeVisible();

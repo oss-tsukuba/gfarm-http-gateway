@@ -26,10 +26,12 @@ const Card = memo(function Card({
     isActive,
     iconPixelSize,
     dateFormat,
-    ItemMenuActions,
     onClick,
     onDoubleClick,
     onContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    isButtonMenuOpenFor,
     onCheck,
     iconSize,
 }) {
@@ -80,7 +82,12 @@ const Card = memo(function Card({
                 {getTimeStr(item.mtime, dateFormat)}
             </div>
             <div className="position-absolute bottom-0 end-0 mt-2">
-                <ItemMenu item={item} actions={ItemMenuActions} />
+                <ItemMenu
+                    item={item}
+                    isOpen={isButtonMenuOpenFor(item)}
+                    onOpen={openContextMenu}
+                    onClose={closeContextMenu}
+                />
             </div>
         </div>
     );
@@ -91,7 +98,6 @@ function IconView({
     selectedItems,
     active,
     lastSelectedItem,
-    ItemMenuActions,
     handleDoubleClick,
     handleClick,
     handleSelectItem,
@@ -99,7 +105,9 @@ function IconView({
     handleSelectAll,
     sortDirection,
     setSortDirection,
-    setContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    isButtonMenuOpenFor,
 }) {
     const headerCheckboxRef = useRef(null);
     const listRef = useRef(null); // wrapper around VList (measure height/width and scrollbar)
@@ -204,9 +212,9 @@ function IconView({
     const onRowCtx = useCallback(
         (e, item) => {
             e.preventDefault();
-            setContextMenu({ show: true, x: e.pageX, y: e.pageY, item });
+            openContextMenu(e.pageX, e.pageY, item, "contextmenu");
         },
-        [setContextMenu]
+        [openContextMenu]
     );
 
     // ===== Header =====
@@ -285,10 +293,12 @@ function IconView({
                                 isActive={isActive}
                                 iconPixelSize={iconPixelSize}
                                 dateFormat={dateFormat}
-                                ItemMenuActions={ItemMenuActions}
                                 onClick={onRowClick}
                                 onDoubleClick={onRowDbl}
                                 onContextMenu={onRowCtx}
+                                openContextMenu={openContextMenu}
+                                closeContextMenu={closeContextMenu}
+                                isButtonMenuOpenFor={isButtonMenuOpenFor}
                                 onCheck={(checked, it) => handleSelectItem(checked, it)}
                                 iconSize={iconSize === "small" ? "small" : "regular"}
                             />
@@ -346,7 +356,6 @@ IconView.propTypes = {
     selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     active: PropTypes.bool,
     lastSelectedItem: FileItemShape,
-    ItemMenuActions: PropTypes.array,
     handleClick: PropTypes.func.isRequired,
     handleDoubleClick: PropTypes.func.isRequired,
     handleSelectItem: PropTypes.func.isRequired,
@@ -357,7 +366,9 @@ IconView.propTypes = {
         order: PropTypes.oneOf(["asc", "desc"]),
     }).isRequired,
     setSortDirection: PropTypes.func.isRequired,
-    setContextMenu: PropTypes.func.isRequired,
+    openContextMenu: PropTypes.func.isRequired,
+    closeContextMenu: PropTypes.func.isRequired,
+    isButtonMenuOpenFor: PropTypes.func.isRequired,
 };
 
 Card.propTypes = {
@@ -366,10 +377,12 @@ Card.propTypes = {
     isActive: PropTypes.bool,
     iconPixelSize: PropTypes.string.isRequired,
     dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
-    ItemMenuActions: PropTypes.array, // keep loose unless you have an explicit action shape
     onClick: PropTypes.func.isRequired,
     onDoubleClick: PropTypes.func.isRequired,
     onContextMenu: PropTypes.func.isRequired,
+    openContextMenu: PropTypes.func.isRequired,
+    closeContextMenu: PropTypes.func.isRequired,
+    isButtonMenuOpenFor: PropTypes.func.isRequired,
     onCheck: PropTypes.func.isRequired,
     iconSize: PropTypes.oneOf(["small", "regular"]).isRequired,
 };

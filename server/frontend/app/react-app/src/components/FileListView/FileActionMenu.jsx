@@ -202,86 +202,123 @@ function MenuList({ items, testidPrefix }) {
     );
 }
 
-function ItemMenu({ item, actions }) {
-    const items = buildMenuItems(item, actions, {});
+function ItemMenu({ item, isOpen, onOpen, onClose }) {
+    const btnRef = useRef(null);
+
+    const openAtButton = () => {
+        const r = btnRef.current.getBoundingClientRect();
+        onOpen(r.left, r.bottom, item, "button");
+    };
 
     return (
-        <div className="dropdown">
-            <button
-                type="button"
-                className="btn p-0 border-0"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                data-testid="item-menu"
-                data-bs-auto-close="true"
-            >
-                <BsThreeDots />
-            </button>
-
-            <ul className="dropdown-menu">
-                <MenuList items={items} testidPrefix={`menu-${item.name}`} />
-            </ul>
-        </div>
+        <button
+            ref={btnRef}
+            type="button"
+            className="btn p-0 border-0"
+            aria-haspopup="menu"
+            aria-expanded={isOpen ? "true" : "false"}
+            data-testid="item-menu"
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isOpen) {
+                    onClose();
+                } else {
+                    openAtButton();
+                }
+            }}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpen(e.clientX, e.clientY, item);
+            }}
+        >
+            <BsThreeDots />
+        </button>
     );
 }
 
-function ContextMenu({ x, y, item, onClose, actions }) {
-    const menuRef = useRef(null);
+function ContextMenu({ x, y, item, actions, onClose }) {
+    const ref = useRef(null);
     const [pos, setPos] = useState({ left: x, top: y });
-    const PADDING = 8;
+    const EDGE = 8;
 
     useEffect(() => {
         const handle = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) onClose?.();
+            if (ref.current && !ref.current.contains(e.target)) onClose?.();
         };
         window.addEventListener("click", handle);
         return () => window.removeEventListener("click", handle);
     }, [onClose]);
 
     useLayoutEffect(() => {
-        const el = menuRef.current;
+        const el = ref.current;
         if (!el) return;
 
-        el.style.visibility = "hidden";
+        // el.style.visibility = "hidden";
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
-        el.style.maxWidth = "calc(100vw - 2 * var(--pad))";
-        el.style.setProperty("--pad", `${PADDING}px`);
-        el.offsetHeight;
+        el.style.maxWidth = `calc(100vw - ${EDGE * 2}px)`;
+        void el.offsetHeight;
 
-        const { offsetWidth: w, offsetHeight: h } = el;
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
 
-        let nx = x,
-            ny = y;
+        let nx = x;
+        let ny = y;
 
-        if (x + w + PADDING > vw) nx = x - w;
-        if (y + h + PADDING > vh) ny = y - h;
+        if (x + w + EDGE > vw) nx = x - w;
+        if (y + h + EDGE > vh) ny = y - h;
 
-        nx = Math.max(PADDING, Math.min(nx, vw - w - PADDING));
-        ny = Math.max(PADDING, Math.min(ny, vh - h - PADDING));
+        nx = Math.max(EDGE, Math.min(nx, vw - w - EDGE));
+        ny = Math.max(EDGE, Math.min(ny, vh - h - EDGE));
 
         setPos({ left: nx, top: ny });
-
         el.style.visibility = "";
     }, [x, y]);
 
-    const items = buildMenuItems(item, actions, { onClose });
+    useEffect(() => {
+        const relayout = () => {
+            const el = ref.current;
+            if (!el) return;
+            const w = el.offsetWidth;
+            const h = el.offsetHeight;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            setPos((p) => ({
+                left: Math.max(EDGE, Math.min(p.left, vw - w - EDGE)),
+                top: Math.max(EDGE, Math.min(p.top, vh - h - EDGE)),
+            }));
+        };
+        window.addEventListener("resize", relayout);
+        window.addEventListener("orientationchange", relayout);
+        return () => {
+            window.removeEventListener("resize", relayout);
+            window.removeEventListener("orientationchange", relayout);
+        };
+    }, []);
+
+    const items = buildMenuItems(item, actions, { onClose, withIcons: false });
 
     return (
         <ul
-            ref={menuRef}
-            className="dropdown-menu show position-absolute"
+            ref={ref}
+            className="dropdown-menu show"
+            role="menu"
             style={{
-                position: "fixed",
+                position: "absolute",
                 left: pos.left,
                 top: pos.top,
                 zIndex: 1050,
                 display: "block",
+                maxWidth: `min(360px, calc(100vw - ${EDGE * 2}px))`,
+                wordBreak: "break-word",
+                whiteSpace: "normal",
             }}
         >
-            <MenuList items={items} />
+            <MenuList items={items} testidPrefix={`menu-${item.name}`} />
         </ul>
     );
 }
@@ -300,7 +337,9 @@ MenuList.propTypes = {
 
 ItemMenu.propTypes = {
     item: PropTypes.object,
-    actions: PropTypes.array,
+    isOpen: PropTypes.bool.isRequired,
+    onOpen: PropTypes.func.isRequired,
+    onClose: PropTypes.func.isRequired,
 };
 
 ContextMenu.propTypes = {
