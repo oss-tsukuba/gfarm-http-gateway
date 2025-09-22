@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState, useLayoutEffect } from "react";
 import {
     BsThreeDots,
     BsInfoCircle,
@@ -104,70 +104,106 @@ function FileActionMenu({ actions, selectedItems }) {
     );
 }
 
-function ItemMenu({ item, actions }) {
-    const menuItems = [
+function buildMenuItems(item, actions, { onClose } = {}) {
+    const wrap = (fn) => () => {
+        onClose?.();
+        fn();
+    };
+
+    const base = [
         {
+            key: "detail",
             label: "Detail",
             icon: <BsInfoCircle />,
-            action: () => actions.showDetail(item),
-            testid: "detail",
+            onClick: () => actions.showDetail(item),
         },
         item.is_file && {
+            key: "view",
             label: "View",
             icon: <BsEye />,
-            action: () => actions.display(item.path),
-            testid: "view",
+            onClick: () => actions.display(item.path),
         },
+        { key: "rename", label: "Rename", icon: <BsPencil />, onClick: () => actions.rename(item) },
         {
-            label: "Rename",
-            icon: <BsPencil />,
-            action: () => actions.rename(item),
-            testid: "rename",
-        },
-        {
+            key: "move",
             label: "Move",
             icon: <BsArrowRightSquare />,
-            action: () => actions.move([item]),
-            testid: "move",
+            onClick: () => actions.move([item]),
         },
         item.is_file && {
+            key: "copy",
             label: "Copy",
             icon: <BsFiles />,
-            action: () => actions.copy(item),
-            testid: "copy",
+            onClick: () => actions.copy(item),
         },
         {
+            key: "download",
             label: "Download",
             icon: <BsDownload />,
-            action: () => actions.download([item]),
-            testid: "download",
+            onClick: () => actions.download([item]),
         },
         {
+            key: "symlink",
             label: "Create Symlink",
             icon: <BsFileEarmarkPlus />,
-            action: () => actions.create_symlink(item),
-            testid: "symlink",
+            onClick: () => actions.create_symlink(item),
         },
         {
+            key: "permissions",
             label: "Permissions",
             icon: <BsShieldLock />,
-            action: () => actions.permission(item),
-            testid: "permissions",
+            onClick: () => actions.permission(item),
         },
         {
+            key: "acl",
             label: "ACL",
             icon: <BsCardChecklist />,
-            action: () => actions.accessControl(item),
-            testid: "acl",
+            onClick: () => actions.accessControl(item),
         },
-        { label: "URL", icon: <BsLink45Deg />, action: () => actions.share(item), testid: "url" },
+        { key: "url", label: "URL", icon: <BsLink45Deg />, onClick: () => actions.share(item) },
         {
+            key: "delete",
             label: "Delete",
             icon: <BsTrash />,
-            action: () => actions.remove([item]),
-            testid: "delete",
+            onClick: () => actions.remove([item]),
         },
     ].filter(Boolean);
+
+    // ContextMenu では onClose を前段に、ItemMenu ではそのまま
+    return base.map(({ key, label, icon, onClick }) => ({
+        key,
+        label,
+        icon,
+        onClick: onClose ? wrap(onClick) : onClick,
+    }));
+}
+
+function MenuList({ items, testidPrefix }) {
+    return (
+        <>
+            {items.map(({ key, label, icon, onClick }) => (
+                <li key={key}>
+                    <button
+                        className="dropdown-item"
+                        onClick={onClick}
+                        data-testid={testidPrefix ? `${key}-${testidPrefix}` : undefined}
+                    >
+                        {icon ? (
+                            <>
+                                {icon} <span className="ms-2">{label}</span>
+                            </>
+                        ) : (
+                            label
+                        )}
+                    </button>
+                </li>
+            ))}
+        </>
+    );
+}
+
+function ItemMenu({ item, actions }) {
+    const items = buildMenuItems(item, actions, {});
 
     return (
         <div className="dropdown">
@@ -177,21 +213,13 @@ function ItemMenu({ item, actions }) {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 data-testid="item-menu"
+                data-bs-auto-close="true"
             >
                 <BsThreeDots />
             </button>
+
             <ul className="dropdown-menu">
-                {menuItems.map(({ label, icon, action, testid }) => (
-                    <li key={testid}>
-                        <button
-                            className="dropdown-item"
-                            onClick={action}
-                            data-testid={`${testid}-menu-${item.name}`}
-                        >
-                            {icon} <span className="ms-2">{label}</span>
-                        </button>
-                    </li>
-                ))}
+                <MenuList items={items} testidPrefix={`menu-${item.name}`} />
             </ul>
         </div>
     );
@@ -199,112 +227,61 @@ function ItemMenu({ item, actions }) {
 
 function ContextMenu({ x, y, item, onClose, actions }) {
     const menuRef = useRef(null);
+    const [pos, setPos] = useState({ left: x, top: y });
+    const PADDING = 8;
 
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                onClose();
-            }
+        const handle = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) onClose?.();
         };
-        window.addEventListener("click", handleClickOutside);
-        return () => {
-            window.removeEventListener("click", handleClickOutside);
-        };
+        window.addEventListener("click", handle);
+        return () => window.removeEventListener("click", handle);
     }, [onClose]);
 
-    const menuItems = [
-        {
-            label: "Detail",
-            onClick: () => {
-                onClose?.();
-                actions.showDetail(item);
-            },
-        },
-        item.is_file && {
-            label: "View",
-            onClick: () => {
-                onClose?.();
-                actions.display(item.path);
-            },
-        },
-        {
-            label: "Rename",
-            onClick: () => {
-                onClose?.();
-                actions.rename(item);
-            },
-        },
-        {
-            label: "Move",
-            onClick: () => {
-                onClose?.();
-                actions.move([item]);
-            },
-        },
-        item.is_file && {
-            label: "Copy",
-            onClick: () => {
-                onClose?.();
-                actions.copy(item);
-            },
-        },
-        {
-            label: "Download",
-            onClick: () => {
-                onClose?.();
-                actions.download([item]);
-            },
-        },
-        {
-            label: "Create Symlink",
-            onClick: () => {
-                onClose?.();
-                actions.create_symlink(item);
-            },
-        },
-        {
-            label: "Permissions",
-            onClick: () => {
-                onClose?.();
-                actions.permission(item);
-            },
-        },
-        {
-            label: "ACL",
-            onClick: () => {
-                onClose?.();
-                actions.accessControl(item);
-            },
-        },
-        {
-            label: "URL",
-            onClick: () => {
-                onClose?.();
-                actions.share(item);
-            },
-        },
-        {
-            label: "Delete",
-            onClick: () => {
-                onClose?.();
-                actions.remove([item]);
-            },
-        },
-    ].filter(Boolean);
+    useLayoutEffect(() => {
+        const el = menuRef.current;
+        if (!el) return;
+
+        el.style.visibility = "hidden";
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.maxWidth = "calc(100vw - 2 * var(--pad))";
+        el.style.setProperty("--pad", `${PADDING}px`);
+        el.offsetHeight;
+
+        const { offsetWidth: w, offsetHeight: h } = el;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        let nx = x,
+            ny = y;
+
+        if (x + w + PADDING > vw) nx = x - w;
+        if (y + h + PADDING > vh) ny = y - h;
+
+        nx = Math.max(PADDING, Math.min(nx, vw - w - PADDING));
+        ny = Math.max(PADDING, Math.min(ny, vh - h - PADDING));
+
+        setPos({ left: nx, top: ny });
+
+        el.style.visibility = "";
+    }, [x, y]);
+
+    const items = buildMenuItems(item, actions, { onClose });
 
     return (
         <ul
             ref={menuRef}
             className="dropdown-menu show position-absolute"
-            style={{ top: y, left: x, zIndex: 1050, display: "block" }}
+            style={{
+                position: "fixed",
+                left: pos.left,
+                top: pos.top,
+                zIndex: 1050,
+                display: "block",
+            }}
         >
-            {menuItems.map((menuItem, idx) => (
-                <li key={idx}>
-                    <button className="dropdown-item" onClick={menuItem.onClick}>
-                        {menuItem.label}
-                    </button>
-                </li>
-            ))}
+            <MenuList items={items} />
         </ul>
     );
 }
@@ -314,6 +291,11 @@ export { FileActionMenu, ItemMenu, ContextMenu };
 FileActionMenu.propTypes = {
     selectedItems: PropTypes.array,
     actions: PropTypes.array,
+};
+
+MenuList.propTypes = {
+    items: PropTypes.array,
+    testidPrefix: PropTypes.string,
 };
 
 ItemMenu.propTypes = {

@@ -18,6 +18,7 @@ import { useUserInfo } from "@context/UserInfoContext";
 import "@css/FileListView.css";
 import { BsHouse } from "react-icons/bs";
 import { FileItemShape } from "@hooks/useFileList";
+import useCloseOthersOnToggle from "@hooks/useCloseOthersOnToggle";
 import PropTypes from "prop-types";
 
 function FileListView({
@@ -66,6 +67,8 @@ function FileListView({
         y: 0,
         item: null,
     });
+
+    useCloseOthersOnToggle();
 
     useEffect(() => {
         setSelectedItems([]);
