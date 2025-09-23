@@ -2308,19 +2308,6 @@ class FileInfo:
         self.mtime = mtime
 
 
-def classify_gfarm_error(elist: list[str], return_code: int):
-    msg = elist[-1].lower()
-    if "no such file or directory" in msg:
-        return FileNotFoundError(msg)
-    if "unknown host" in msg:
-        return FileNotFoundError(msg)
-    if "permission denied" in msg:
-        return PermissionError(msg)
-    if "connection refused" in msg:
-        return ConnectionRefusedError(msg)
-    return RuntimeError(msg or f"gfarm exited with {return_code}")
-
-
 async def get_file_info(env, path) -> FileInfo:
     metadata = False
     proc = await gfstat(env, path, metadata)
@@ -2331,7 +2318,7 @@ async def get_file_info(env, path) -> FileInfo:
     await stderr_task
     return_code = await proc.wait()
     if return_code != 0:
-        err = classify_gfarm_error(elist, return_code)
+        err = classify_gfarm_error(elist)
         # err.stderr = elist
         raise err
     st = parse_gfstat(stdout)
@@ -2461,6 +2448,13 @@ def is_utf8(s):
         return False
 
 
+class AuthenticationError(Exception):
+    # Unauthenticated: missing/invalid/expired credentials.
+    def __init__(self, message, *, stderr=None):
+        super().__init__(message)
+        self.stderr = stderr or []
+
+
 def gfarm_http_error(command, code, message, stdout, elist):
     detail = {
         "command": command,
@@ -2478,20 +2472,38 @@ EXC_TO_STATUS = {
     FileNotFoundError: status.HTTP_404_NOT_FOUND,
     PermissionError: status.HTTP_403_FORBIDDEN,
     ConnectionRefusedError: status.HTTP_403_FORBIDDEN,
-    RuntimeError: status.HTTP_500_INTERNAL_SERVER_ERROR
+    RuntimeError: status.HTTP_500_INTERNAL_SERVER_ERROR,
+    AuthenticationError: status.HTTP_401_UNAUTHORIZED
 }
 
 
-def raise_gfarm_http_error(opname, err: Exception):
+def classify_gfarm_error(elist: list[str]):
+    errstr = str(elist).lower()
+    msg = last_emsg(elist)
+    if "no such file or directory" in errstr:
+        return FileNotFoundError(msg)
+    if "unknown host" in errstr:
+        return FileNotFoundError(msg)
+    if "permission denied" in errstr:
+        return PermissionError(msg)
+    if "connection refused" in errstr:
+        return ConnectionRefusedError(msg)
+    if "authentication error" in errstr:
+        return AuthenticationError(msg)
+    return RuntimeError(msg or "Internal Server Error")
+
+
+def raise_gfarm_http_error(command, err: Exception, stdout="", elist=[]):
     # Select HTTP code depending on exception class (undefined is 500)
     code = next(
         (code for exc, code in EXC_TO_STATUS.items() if isinstance(err, exc)),
         status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
     stderr = getattr(err, "stderr", [])
-    elist = stderr if isinstance(stderr, list) else [stderr]
+    stderr = stderr if isinstance(stderr, list) else [stderr]
+    error_list = stderr if len(stderr) > 0 else elist
     message = f"{str(err)}"
-    raise gfarm_http_error(opname, code, message, "", elist)
+    raise gfarm_http_error(command, code, message, stdout, error_list)
 
 
 async def gfarm_command_standard_response(env, proc, command):
@@ -2504,18 +2516,14 @@ async def gfarm_command_standard_response(env, proc, command):
     await stderr_task
     return_code = await proc.wait()
     if return_code != 0:
-        errstr = str(elist)
-        last_e = last_emsg(elist)
-        if "authentication error" in errstr:
-            code = status.HTTP_401_UNAUTHORIZED
-            message = "Authentication error"
-        else:
-            code = status.HTTP_500_INTERNAL_SERVER_ERROR
-            message = "Internal Server Error"
-        logger.opt(depth=1).debug(
-            f"{ipaddr}:0 user={user}, cmd={command}, return={return_code},"
-            f" last_emsg={last_e}")
-        raise gfarm_http_error(command, code, message, stdout, elist)
+        try:
+            last_e = last_emsg(elist)
+            logger.opt(depth=1).debug(
+                f"{ipaddr}:0 user={user}, cmd={command}, return={return_code},"
+                f" last_emsg={last_e}")
+            raise classify_gfarm_error(elist)
+        except Exception as err:
+            raise_gfarm_http_error(command, err, stdout, elist)
     if DEBUG:
         if is_utf8(stdout):
             out = stdout.strip()
@@ -2596,7 +2604,7 @@ async def dir_list(gfarm_path: str,
                     # output_data.append(entry)
                     yield entry + "\n"
         except RuntimeError as e:
-            err = classify_gfarm_error([str(e)], 1)
+            err = classify_gfarm_error([str(e)])
             message = f"Failed to execute gfls: path={gfarm_path} : {str(e)}"
             if isinstance(err, PermissionError):
                 err_code = status.HTTP_403_FORBIDDEN
