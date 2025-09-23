@@ -3006,7 +3006,14 @@ async def zip_export(request: Request,
             await task
             raise
 
-    zipname = 'download_' + datetime.now().strftime('%Y%m%d-%H%M%S') + '.zip'
+    single_dir = len(filedatas) == 1 and not filedatas[0][1]
+    date_str = datetime.now().strftime('%Y%m%d-%H%M%S')
+    if single_dir:
+        target_dir = filedatas[0][0].rstrip("/")
+        base_folder_name = os.path.basename(target_dir) or "download"
+        zipname = f"{base_folder_name}_{date_str}.zip"
+    else:
+        zipname = f"{GFARM_PREFIX}_{date_str}.zip"
     headers = {"Content-Disposition": f'attachment; filename="{zipname}"'}
     return StreamingResponse(
         content=generate(),
