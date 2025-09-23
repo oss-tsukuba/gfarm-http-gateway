@@ -11,8 +11,6 @@ const getAuthorityRoot = (path) => {
 
 const splitGfarmPath = (input) => {
     const path = String(input || "");
-    console.log("splitGfarmPath input", input);
-    console.log("splitGfarmPath path", path);
     const root = getAuthorityRoot(path); // "prefix://authority/"
     if (root) {
         const after = path.replace(/^\/?/, "").slice(root.length); // strip optional "/" then root

@@ -25,7 +25,7 @@ function App() {
                 const css = await getIconCSS();
                 loadExternalCss(css);
             } catch {
-                console.log("Failed to load file_icons.json");
+                console.warn("Failed to load file_icons.json");
             } finally {
                 if (active) setCssLoading(false);
             }

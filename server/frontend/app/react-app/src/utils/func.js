@@ -15,7 +15,6 @@ const RE_AUTH_SCHEME = new RegExp(`^${ESCAPED_PREFIX_FOR_REGEX}://`, "i");
 
 export const normalizeGfarmUrl = (path) => {
     if (!path) return path;
-    console.log("normalizeGfarmUrl", path);
 
     if (!RE_HAS_SCHEME_PREFIX.test(path)) return path;
     if (RE_EMPTY_AUTH_SCHEME.test(path)) return path.replace(RE_EMPTY_AUTH_SCHEME, "/");
