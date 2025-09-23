@@ -3,6 +3,11 @@ import { API_URL, GFARM_PREFIX } from "@utils/config";
 import { apiFetch } from "@utils/apiFetch";
 import get_error_message from "@utils/error";
 
+function ensureGfarmScheme(path) {
+    if (path.startsWith(`${GFARM_PREFIX}:`)) return path;
+    return `${GFARM_PREFIX}:${path}`;
+}
+
 /*
 class Tar(BaseModel):
     command: str
@@ -40,9 +45,9 @@ export default async function gfptar(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             command,
-            basedir: `${GFARM_PREFIX}:${targetDir}`,
+            basedir: ensureGfarmScheme(targetDir),
             source: targetItems,
-            outdir: `${GFARM_PREFIX}:${destDir}`,
+            outdir: ensureGfarmScheme(destDir),
             options,
         }),
         signal: controller.signal,
