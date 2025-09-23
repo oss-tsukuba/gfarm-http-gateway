@@ -8,32 +8,28 @@ async function dirCommon(path, method, message, params = null) {
         return "path is empty";
     }
     const epath = encodePath(path);
-    try {
-        const url = `${API_URL}/dir${epath}?${params || ""}`;
-        const response = await apiFetch(url, {
-            credentials: "include",
-            method: method,
-        });
-        if (!response.ok) {
-            let detail;
-            try {
-                const ct = response.headers.get("content-type") || "";
-                detail = ct.includes("application/json")
-                    ? (await response.json())?.detail
-                    : await response.text();
-            } catch {
-                // no-op
-            }
-            console.debug(`dirCommon: ${detail}`);
-            const message = get_error_message(response.status, detail);
-            throw new Error(message);
+
+    const url = `${API_URL}/dir${epath}?${params || ""}`;
+    const response = await apiFetch(url, {
+        credentials: "include",
+        method: method,
+    });
+    if (!response.ok) {
+        let detail;
+        try {
+            const ct = response.headers.get("content-type") || "";
+            detail = ct.includes("application/json")
+                ? (await response.json())?.detail
+                : await response.text();
+        } catch {
+            // no-op
         }
-        console.debug(`dirCommon: Success (${message})`);
-        return null;
-    } catch (error) {
-        console.error(error);
-        return `${error.name} : ${error.message}`;
+        console.debug(`dirCommon: ${detail}`);
+        const message = get_error_message(response.status, detail);
+        throw new Error(message);
     }
+    console.debug(`dirCommon: Success (${message})`);
+    return null;
 }
 
 export async function createDir(path, params = null) {

@@ -3,6 +3,7 @@ import { upload, checkPermission } from "@utils/upload";
 import download from "@utils/download";
 import copyFile from "@utils/copy";
 import gfptar from "@utils/archive";
+import { createDir } from "@utils/dircommon";
 import { PARALLEL_LIMIT } from "@utils/config";
 import { getParentPath, suggestNewName } from "@utils/func";
 
@@ -66,65 +67,151 @@ function useProgressTasks(refreshItems, addNotification) {
     };
 
     const handleUpload = async (taskId, newItems) => {
-        const destDirSet = {};
-        const uploadDirSet = new Set(["/"]);
-
+        // shared across the worker pool
+        const uploadDirSet = new Set(); // proof that dir exists
+        const dirInitPromises = new Map(); // dir -> Promise
+        const total = newItems.length;
         let exec_count = 0;
         let cancelled = false;
+        const cancelFns = new Set();
+        const perFilePercent = Array.from({ length: total }, () => ({ value: 0, message: "" }));
 
-        const progressCallback = ({ status, value, message, done, onCancel }) => {
-            if (onCancel && cancelled) {
-                onCancel();
+        // Wire this task's Cancel
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.taskId === taskId
+                    ? updateTask(task, {
+                          onCancel: () => {
+                              cancelled = true;
+                              for (const onCancel of Array.from(cancelFns)) {
+                                  try {
+                                      onCancel();
+                                  } catch {
+                                      console.warn("failed to run onCancel()");
+                                  }
+                              }
+                          },
+                      })
+                    : task
+            )
+        );
+
+        const dir = newItems[0]?.uploadDir;
+        if (dir) {
+            const err = await checkPermission(dir);
+            if (err) {
+                setError("Upload", err);
+                return;
             }
-            const cancelFunc = onCancel
-                ? () => {
-                      cancelled = true;
-                      onCancel();
-                  }
-                : null;
-            const progressMessage = message
-                ? `(${exec_count}/${newItems.length})\n ${message}`
-                : null;
+        }
+
+        const ensureDirOnce = async (dir) => {
+            if (!dir || cancelled) return;
+            if (uploadDirSet.has(dir)) return;
+
+            // someone already creating it? await that
+            const existing = dirInitPromises.get(dir);
+            if (existing) {
+                await existing;
+                return;
+            }
+
+            // create and memoize
+            const p = (async () => {
+                try {
+                    await createDir(dir, "p=on");
+                    uploadDirSet.add(dir);
+                } catch (e) {
+                    const msg = String(e?.message || e);
+                    setError("Upload", `${e.name ?? "Error"} : ${msg}`);
+                } finally {
+                    dirInitPromises.delete(dir);
+                }
+            })();
+
+            dirInitPromises.set(dir, p);
+            await p;
+        };
+
+        let lastUpdate = 0;
+        const updateOverall = (extraMsg) => {
+            const now = performance?.now?.() ?? Date.now();
+            if (now - lastUpdate < 80 && !extraMsg) return;
+            lastUpdate = now;
+
+            const sum = perFilePercent.reduce((acc, x) => acc + (x?.value ?? 0), 0);
+            const overall = Math.floor(sum / Math.max(1, total));
+            const lines = extraMsg
+                ? [extraMsg]
+                : perFilePercent
+                      .filter((x) => x && x.value < 100 && x.message)
+                      .map((x) => x.message);
             setTasks((prev) =>
                 prev.map((task) =>
                     task.taskId === taskId
                         ? updateTask(task, {
-                              status,
-                              value,
-                              message: progressMessage,
-                              done,
-                              onCancel: cancelFunc,
+                              value: overall,
+                              message: `(${exec_count}/${total}) \n${lines.join("\n")}`,
                           })
                         : task
                 )
             );
         };
-        progressCallback({ onCancel: () => {} });
 
-        for (const file of newItems) {
-            if (cancelled) {
-                break;
-            }
-            if (file.uploadDir && !(file.uploadDir in destDirSet)) {
-                const error = await checkPermission(file.uploadDir);
-                if (error) {
-                    setError("Upload", error);
-                    break;
+        const progressCallback =
+            (idx) =>
+            ({ value, message, onCancel }) => {
+                if (onCancel) {
+                    const wrapped = () => {
+                        try {
+                            onCancel();
+                        } catch {
+                            console.debug("failed to run onCancel()");
+                        }
+                    };
+                    cancelFns.add(wrapped);
                 }
-                destDirSet[file.uploadDir] = true;
-            }
-            exec_count++;
-            if (!file) continue;
+                const clamp = (n) => Math.max(0, Math.min(100, n ?? 0));
+                perFilePercent[idx] = {
+                    value: clamp(value),
+                    message: message ?? perFilePercent[idx]?.message ?? "",
+                };
+                updateOverall();
+            };
 
-            const fullPath = file.destPath;
+        // Worker pool (parallel uploads within the task)
+        const CONCURRENCY = Math.max(1, PARALLEL_LIMIT);
+        let next = 0;
+        async function runOne() {
+            while (!cancelled) {
+                const i = next++;
+                const file = newItems[i];
+                if (!file) break;
 
-            try {
-                await upload(file, fullPath, uploadDirSet, progressCallback, setError);
-            } catch (e) {
-                console.error("uploadFile failed:", e);
+                const uploadDirPath = file.is_file ? getParentPath(file.destPath) : file.destPath;
+                await ensureDirOnce(uploadDirPath);
+
+                exec_count++;
+                if (file.is_dir) {
+                    perFilePercent[i] = { value: 100, message: perFilePercent[i]?.message ?? "" };
+                    updateOverall();
+                    continue;
+                }
+                if (cancelled) break;
+
+                try {
+                    await upload(file, file.destPath, progressCallback(i), setError);
+                } catch (e) {
+                    console.error("uploadFile failed:", e);
+                } finally {
+                    perFilePercent[i] = { value: 100, message: perFilePercent[i]?.message ?? "" };
+                    updateOverall();
+                }
             }
         }
+        await Promise.all(Array.from({ length: CONCURRENCY }, () => runOne()));
 
+        // finish
         setTasks((prev) =>
             prev.map((task) =>
                 task.taskId === taskId
@@ -132,8 +219,9 @@ function useProgressTasks(refreshItems, addNotification) {
                           status: cancelled ? "cancelled" : "completed",
                           message: cancelled
                               ? `(${exec_count}/${newItems.length}) Upload cancelled`
-                              : task.message,
+                              : `(${exec_count}/${newItems.length}) Upload completed`,
                           done: true,
+                          value: 100,
                       })
                     : task
             )

@@ -39,10 +39,14 @@ function NewDirModal({ hideModalComponent, currentDir, refresh }) {
         }
         const create = async () => {
             const path = currentDir.replace(/\/$/, "") + "/" + trimmedName;
-            const error = await createDir(path);
+            try {
+                await createDir(path);
+            } catch (error) {
+                console.error(error);
+                addNotification(title, `${error.name} : ${error.message}`, "error");
+            }
             setVisible(false);
             setDirname("");
-            if (error) addNotification(title, error, "error");
             refresh();
         };
         create();

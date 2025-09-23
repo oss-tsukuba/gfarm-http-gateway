@@ -1,31 +1,19 @@
-import { encodePath, getParentPath } from "@utils/func";
+import { encodePath } from "@utils/func";
 import { apiFetch } from "@utils/apiFetch";
-import { createDir } from "@utils/dircommon";
 import { API_URL } from "@utils/config";
 import get_error_message, { ErrorCodes, get_ui_error } from "@utils/error";
 
 // file: file + File
 // progressCallback({status, value, message, done, onCancel})
-async function upload(file, fullPath, dirSet, progressCallback, setError) {
+async function upload(file, fullPath, progressCallback, setError) {
     if (!file) {
         setError("Upload", get_ui_error([ErrorCodes.EMPTY_PATH]).message);
         return;
     }
 
-    const uploadDirPath = file.is_file ? getParentPath(file.destPath) : file.destPath;
     const startTime = Date.now();
     const displayPath = fullPath.replace(file.uploadDir + "/", "");
     progressCallback({ value: 0, message: `0 % | 0 sec | 0 bytes/sec\n${displayPath}` });
-
-    let createDirError = null;
-    if (!dirSet.has(uploadDirPath)) {
-        createDirError = await createDir(uploadDirPath, "p=on");
-        dirSet.add(uploadDirPath);
-    }
-    if (createDirError) {
-        setError(uploadDirPath, createDirError);
-        return;
-    }
 
     const epath = encodePath(fullPath);
     const uploadUrl = `${API_URL}/file` + epath;
