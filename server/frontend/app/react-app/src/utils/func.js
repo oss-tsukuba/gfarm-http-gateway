@@ -6,20 +6,21 @@ export const encodePath = (path) => {
     return p.replace(/[^/]/g, encodeURIComponent);
 };
 
-export const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const PFX = typeof GFARM_PREFIX !== "undefined" ? String(GFARM_PREFIX) : "gfarm";
+export const ESCAPED_PREFIX_FOR_REGEX = escapeRegExp(PFX);
+export const RE_HAS_SCHEME_PREFIX = new RegExp(`^${ESCAPED_PREFIX_FOR_REGEX}:`, "i");
+const RE_EMPTY_AUTH_SCHEME = new RegExp(`^${ESCAPED_PREFIX_FOR_REGEX}:///`, "i");
+const RE_AUTH_SCHEME = new RegExp(`^${ESCAPED_PREFIX_FOR_REGEX}://`, "i");
 
 export const normalizeGfarmUrl = (path) => {
     if (!path) return path;
+    console.log("normalizeGfarmUrl", path);
 
-    const pfx = typeof GFARM_PREFIX !== "undefined" ? GFARM_PREFIX : "gfarm";
-    const reHasSchemePrefix = new RegExp(`^${escapeRegExp(pfx)}:`, "i");
-    const reEmptyAuthorityScheme = new RegExp(`^${escapeRegExp(pfx)}:///`, "i");
-    const reAuthorityScheme = new RegExp(`^${escapeRegExp(pfx)}://`, "i");
-
-    if (!reHasSchemePrefix.test(path)) return path;
-    if (reEmptyAuthorityScheme.test(path)) return path.replace(reEmptyAuthorityScheme, "/");
-    if (reAuthorityScheme.test(path)) return "/" + path;
-    return path.replace(reHasSchemePrefix, "");
+    if (!RE_HAS_SCHEME_PREFIX.test(path)) return path;
+    if (RE_EMPTY_AUTH_SCHEME.test(path)) return path.replace(RE_EMPTY_AUTH_SCHEME, "/");
+    if (RE_AUTH_SCHEME.test(path)) return "/" + path;
+    return path.replace(RE_HAS_SCHEME_PREFIX, "");
 };
 
 export const getParentPath = (path) => {

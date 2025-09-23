@@ -1,41 +1,35 @@
 import React from "react";
-import { escapeRegExp } from "@utils/func";
-import { GFARM_PREFIX } from "@utils/config";
+import { ESCAPED_PREFIX_FOR_REGEX, RE_HAS_SCHEME_PREFIX, normalizeGfarmUrl } from "@utils/func";
 import PropTypes from "prop-types";
 
-const hasPrefixedScheme = (path, prefix) => {
-    const p = String(prefix);
-    const re = new RegExp(`^/?${escapeRegExp(p)}://`, "i");
-    return re.test(path || "");
+const RE_SCHEME_AUTHORITY = new RegExp(`^/?(${ESCAPED_PREFIX_FOR_REGEX}://[^/]+)`, "i");
+
+const getAuthorityRoot = (path) => {
+    const m = RE_SCHEME_AUTHORITY.exec(path);
+    return m?.[1] ?? null;
 };
 
-const getAuthorityRoot = (path, prefix) => {
-    const p = String(prefix);
-    const re = new RegExp(`^/?(${escapeRegExp(p)}://[^/]+)`, "i");
-    const m = (path || "").match(re);
-    if (!m) return null;
-    // Normalize to "prefix://authority/" (no leading slash, has trailing slash)
-    const base = m[1].replace(/\/+$/, "");
-    return base;
-};
-
-const splitGfarmPath = (input, prefix) => {
+const splitGfarmPath = (input) => {
     const path = String(input || "");
-    if (hasPrefixedScheme(path, prefix)) {
-        const root = getAuthorityRoot(path, prefix); // "prefix://authority/"
-        if (!root) return [];
+    console.log("splitGfarmPath input", input);
+    console.log("splitGfarmPath path", path);
+    const root = getAuthorityRoot(path); // "prefix://authority/"
+    if (root) {
         const after = path.replace(/^\/?/, "").slice(root.length); // strip optional "/" then root
         const tail = after.split("/").filter(Boolean);
         return [root, ...tail];
     }
-
+    if (RE_HAS_SCHEME_PREFIX.test(path)) {
+        const normalized = normalizeGfarmUrl(path);
+        return normalized.split("/").filter(Boolean);
+    }
     // Relative path
     return path.split("/").filter(Boolean);
 };
 
 function CurrentDirView({ currentDir, onNavigate }) {
     // const parts = currentDir.split("/").filter(Boolean); // remove empty strings
-    const parts = splitGfarmPath(currentDir, GFARM_PREFIX);
+    const parts = splitGfarmPath(currentDir);
 
     return (
         <nav aria-label="breadcrumb">
