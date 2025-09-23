@@ -185,6 +185,7 @@ function useProgressTasks(refreshItems, addNotification) {
         async function runOne() {
             while (!cancelled) {
                 const i = next++;
+                if (i >= newItems.length) break;
                 const file = newItems[i];
                 if (!file) break;
 
