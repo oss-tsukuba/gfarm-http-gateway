@@ -64,6 +64,7 @@ function HomePage() {
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showGfptarModal, setShowGfptarModal] = useState(false);
     const [showSidePanel, setShowSidePanel] = useState({ show: false, tab: "detail" });
+    const [symlinkLoading, setSymlinkLoading] = useState(false);
 
     const jumpDirectory = useCallback(
         (newdir) => {
@@ -110,9 +111,12 @@ function HomePage() {
 
     const handleSymlink = useCallback(
         async (symlink) => {
-            console.debug("handleSymlink", symlink);
+            setSymlinkLoading(true);
+            const linkname =
+                currentItems.find((item) => item.path === symlink)?.linkname ?? symlink;
+            console.debug("handleSymlink", linkname);
             try {
-                const info = await getSymlink(symlink, false);
+                const info = await getSymlink(linkname, false);
                 if (info.is_file) {
                     handleDisplayFile(info.path);
                 } else if (info.is_sym) {
@@ -127,9 +131,12 @@ function HomePage() {
                 }
             } catch (err) {
                 addNotification(symlink, `${err.name} : ${err.message}`, "error");
+            } finally {
+                console.debug("handleSymlink done", linkname);
+                setSymlinkLoading(false);
             }
         },
-        [handleDisplayFile, jumpDirectory, addNotification]
+        [currentItems, handleDisplayFile, jumpDirectory, addNotification]
     );
 
     const handleItemClick = useCallback(
@@ -241,6 +248,8 @@ function HomePage() {
     if (!userInfo) return <LoginPage />;
     if (listGetError) return <ErrorPage error={listGetError} />;
 
+    const busy = listLoading || symlinkLoading;
+
     return (
         <div className="container-fluid bg-body vh-100 d-flex flex-column">
             <div className="flex-shrink-0">
@@ -261,7 +270,7 @@ function HomePage() {
                 </nav>
             </div>
             <div className="flex-grow-1 d-flex flex-column overflow-hidden">
-                {listLoading ? (
+                {busy ? (
                     <div className="d-flex justify-content-center align-items-center">
                         <div className="spinner-border" role="status" aria-hidden="true" />
                     </div>

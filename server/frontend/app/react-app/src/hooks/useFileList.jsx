@@ -6,6 +6,7 @@ import PropTypes from "prop-types";
 // Keep only the minimum fields needed in the list
 const pickListFields = (x) => ({
     name: x.name,
+    linkname: x.linkname || null,
     size: x.size,
     mtime: x.mtime,
     path: x.path,
@@ -99,6 +100,7 @@ export default useFileList;
 export const FileItemShape = PropTypes.shape({
     path: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
+    linkname: PropTypes.string,
     is_dir: PropTypes.bool,
     is_sym: PropTypes.bool,
     size: PropTypes.number,

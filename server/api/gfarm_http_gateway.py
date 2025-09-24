@@ -2636,20 +2636,20 @@ async def get_symlink(gfarm_path: str,
                       get_fullpath: bool = False,
                       authorization: Union[str, None] = Header(default=None)):
     apiname = "/symlink"
+    opname = "gfstat"
     gfarm_path = fullpath(gfarm_path)
     env = await set_env(request, authorization)
     user = get_user_from_env(env)
     ipaddr = get_client_ip_from_env(env)
     elist = []
     try:
-        opname = "gfstat"
         log_operation(env, request.method, apiname, opname, gfarm_path)
         metadata = True
         proc = await gfstat(env, gfarm_path, metadata, False)
 
         stdout = await read_proc_output(opname, proc, elist)
         if stdout is None:
-            raise RuntimeError(str(elist))
+            raise classify_gfarm_error(elist)
         st = parse_gfstat(stdout)
         logger.debug("Stat=\n" + pf(st.model_dump()))
         if st.Filetype == "regular file" and not get_fullpath:
@@ -2668,14 +2668,8 @@ async def get_symlink(gfarm_path: str,
         logger.debug(f"{ipaddr}:0 user={user}, cmd={opname}," +
                      f"stdout={lastentry.json_dump()}")
         return JSONResponse(content=lastentry.json_dump())
-    except RuntimeError as e:
-        code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        message = f"Failed to execute gfls: path={gfarm_path}"
-        raise gfarm_http_error(opname, code, message, str(e), elist)
-    except FileNotFoundError:
-        code = status.HTTP_404_NOT_FOUND
-        message = f"The requested path does not exist: path={gfarm_path}"
-        raise gfarm_http_error(opname, code, message, "", elist)
+    except Exception as e:
+        raise raise_gfarm_http_error(opname, e, elist=elist)
 
 
 class FileOperation(BaseModel):
