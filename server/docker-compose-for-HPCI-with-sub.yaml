@@ -1,0 +1,83 @@
+services:
+  gfarm-http-gateway:
+    build:
+      context: .
+    container_name: gfarm-http-gateway
+    command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips="172.22.0.10"
+    # for Run with a Subpath
+    # command: --host 0.0.0.0 --port 8080 --root-path /gfarm
+    volumes:
+      # Required: Gfarm HTTP gateway config
+      - ./gfarm-http-gateway-for-HPCI.conf:/config/gfarm-http-gateway.conf:ro
+      # Required: Gfarm config
+      - ./config/gfarm2.conf:/config/gfarm2.conf:ro
+      # Required: CA certs for Gfarm
+      - ./config/certs:/config/certs:ro
+      # Custom Login Page
+      - ./templates/login-idp-switch.html:/config/templates/login.html
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - gfarm_http_net
+
+  gfarm-http-gateway-sub:
+    build:
+      context: .
+    container_name: gfarm-http-gateway-sub
+    # for Run with a Subpath
+    command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips="172.22.0.10"
+    volumes:
+      # Required: Gfarm HTTP gateway config
+      - ./gfarm-http-gateway-for-HPCI-sub.conf:/config/gfarm-http-gateway.conf:ro
+      # Required: Gfarm config
+      - ./config/gfarm2.conf:/config/gfarm2.conf:ro
+      # Required: CA certs for Gfarm
+      - ./config/certs:/config/certs:ro
+      # Custom Login Page
+      - ./templates/login-c.html:/config/templates/login.html
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - gfarm_http_net
+
+  nginx-proxy:
+    container_name: nginx-proxy
+    image: nginx:latest
+    ports:
+      - "443:443"    # HTTPS
+    volumes:
+      # Required: Nginx config
+      - ./nginx-for-HPCI-with-sub.conf.sample:/etc/nginx/conf.d/gfarm.conf:ro
+      # Required for HTTPS: TLS server certs/keys for Nginx
+      # set to ssl_certificate and ssl_certificate_key in Nginx config
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - gfarm-http-gateway
+      - gfarm-http-gateway-sub
+    restart: unless-stopped
+    networks:
+      gfarm_http_net:
+        ipv4_address: 172.22.0.10
+
+  redis:
+    image: redis
+    command: ["redis-server", "/config/redis.conf"]
+    volumes:
+      # Required: Redis configuration
+      - ./redis.conf.sample:/config/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - gfarm_http_net
+
+networks:
+  gfarm_http_net:
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24

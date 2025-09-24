@@ -12,3 +12,4 @@ __pycache__
 gfarm-http-gateway.conf
 
 config/
+nginx/
