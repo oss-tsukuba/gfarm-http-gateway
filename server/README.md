@@ -272,6 +272,17 @@ For secure deployments, check **Production settings** below and place gfarm-http
 **Edit `gfarm-http-gateway-for-HPCI.conf`:**
 
 - **`GFARM_HTTP_SESSION_SECRET`** - set a strong, random secret.
+
+  e.g., generate a random value with Python (~64 Base64 chars)
+  ```bash
+  python3 -c "import secrets,base64; print(base64.urlsafe_b64encode(secrets.token_bytes(48)).decode())"
+  ```
+
+  Then set it in the config (keep it one line, quoted):
+  ```conf
+  GFARM_HTTP_SESSION_SECRET="PASTE_THE_RANDOM_STRING_HERE"
+  ```
+
 - **IdP redirect handling** - register the **gfarm-http-gateway host** at your IdP as an allowed redirect URI, and **leave the override empty** so the app uses the reverse-proxied URL:
 
   ```conf
@@ -315,9 +326,9 @@ This setup:
 docker compose -f docker-compose-for-HPCI.yaml down
 ```
 
-## HPCI Setup Example: with Subsidiary System
+## HPCI Setup Example: with an alternative system
 
-This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, subsidiary /sub/).
+This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, alternative /sub/).
 Start Docker with the samples below and adjust IPs/hostnames to your production environment.
 
 This setup uses the following files:  
@@ -328,7 +339,7 @@ This setup uses the following files:
 - `gfarm-http-gateway-for-HPCI.conf`
 - `gfarm-http-gateway-for-HPCI-sub.conf`
 
-### Production settings you must set
+### Production settings (required)
 
 **`nginx-for-HPCI-with-sub.conf.sample`:**
 
@@ -339,30 +350,30 @@ This setup uses the following files:
 
 - gfarm-http-gateway (main): 
   - `command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
-- gfarm-http-gateway (subsidiary): 
+- gfarm-http-gateway (alternative): 
   - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips='<REVERSE_PROXY_IP>'`
 
 > NOTE: `<REVERSE_PROXY_IP>`  
 > IP address(es) of every proxy that adds `X-Forwarded-*` to the request.  
 > - Single tier: specify that one IP.  
-> - Multiple tiers: list them comma-separated, e.g. `10.0.0.5,172.22.0.10`.  
+> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`.  
 >
-> If gfarm-http-gateway is never reachable directly (reverse proxy only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
+> If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
 
 **`templates/login-idp-switch.html`:**
 
 - Set the login buttons to your real URLs:
   - Main: `"location.href='https://<YOUR_HOST>/login_oidc'"`
-  - Subsidiary: `"location.href='https://<YOUR_HOST>/sub/login_oidc'"`
+  - Alternative: `"location.href='https://<YOUR_HOST>/sub/login_oidc'"`
 
 **`gfarm-http-gateway-for-HPCI*.conf`:**
 
 
 - Set production values as in [Option 4](#option-4-run-in-hpci-shared-storage-environment):
   - `gfarm-http-gateway-for-HPCI.conf` (main)
-  - `gfarm-http-gateway-for-HPCI-sub.conf` (subsidiary)
+  - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
 
-### Start gfarm-http-gateway with Subsidiary System
+### Start gfarm-http-gateway with an alternative system
 
 See [Option 4](#option-4-run-in-hpci-shared-storage-environment) and run Docker Compose with `docker-compose-for-HPCI-with-sub.yaml`.
 
@@ -462,7 +473,7 @@ docker compose up -d
 - **Gfarm client environment on gfarm-http-gateway**
   - Prepare the Gfarm environment **on the same host where gfarm-http-gateway runs**.
   - Ensure `gf*` commands and a valid `gfarm2.conf` are available.
-  - Create and use a dedicated user for gfarm-http-gateway (e.g. `gfhg`), and configure that user's Gfarm configuration file (e.g. `/home/gfhg/.gfarm2rc`).
+  - Create and use a dedicated user for gfarm-http-gateway (e.g., `gfhg`), and configure that user's Gfarm configuration file (e.g., `/home/gfhg/.gfarm2rc`).
     - set enable to `sasl` with `auth enable sasl`
     - set disable to all other methods with `auth disable <all other methods>`
     - Do not set `sasl_mechanisms` or `sasl_user`

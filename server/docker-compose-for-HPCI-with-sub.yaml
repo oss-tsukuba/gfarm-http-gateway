@@ -35,7 +35,7 @@ services:
       # Required: CA certs for Gfarm
       - ./config/certs:/config/certs:ro
       # Custom Login Page
-      - ./templates/login-c.html:/config/templates/login.html
+      - ./templates/login-idp-switch.html:/config/templates/login.html
     depends_on:
       - redis
     restart: unless-stopped
@@ -47,6 +47,7 @@ services:
     image: nginx:latest
     ports:
       - "443:443"    # HTTPS
+      # - "8880:8880"  # HTTP
     volumes:
       # Required: Nginx config
       - ./nginx-for-HPCI-with-sub.conf.sample:/etc/nginx/conf.d/gfarm.conf:ro
