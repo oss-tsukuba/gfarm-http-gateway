@@ -69,7 +69,15 @@ const Card = memo(function Card({
                 onClick={() => onClick(!isSelected, item)}
                 onDoubleClick={() => onDoubleClick(item)}
             >
-                {item.name}
+                <div
+                    className="file-item-name"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDoubleClick(item);
+                    }}
+                >
+                    {item.name}
+                </div>
             </div>
             <div
                 className="text-muted text-center text-break px-3"

@@ -31,7 +31,7 @@ const RowView = memo(function RowView({
 }) {
     return (
         <div
-            className={`align-middle d-grid ${isLastSelected ? "file-item-active" : ""}`}
+            className={`align-middle d-grid file-item ${isLastSelected ? "file-item-active" : ""}`}
             style={{
                 gridTemplateColumns: "40px 36px 1fr 140px 180px 56px",
                 alignItems: "center",
@@ -65,7 +65,17 @@ const RowView = memo(function RowView({
                 </span>
             </div>
 
-            <div className="text-break">{item.name}</div>
+            <div className="text-break">
+                <div
+                    className="file-item-name"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDoubleClick(item);
+                    }}
+                >
+                    {item.name}
+                </div>
+            </div>
 
             <div className="text-nowrap">{formatFileSize(item.size, item.is_dir)}</div>
 
@@ -139,7 +149,9 @@ const RowSmView = memo(function RowSmView({
                             />
                         </span>
                         <div>
-                            <div className="text-break">{item.name}</div>
+                            <div className="text-break">
+                                <div className="file-item-name">{item.name}</div>
+                            </div>
                             <div className="small-info">
                                 <div className="text-muted" style={{ fontSize: "0.8rem" }}>
                                     {formatFileSize(item.size, item.is_dir)}

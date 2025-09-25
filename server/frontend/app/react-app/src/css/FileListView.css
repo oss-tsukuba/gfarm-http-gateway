@@ -20,6 +20,14 @@
     background-color: rgba(255, 255, 255, .15);
 }
 
+.file-item-name {
+    display: inline;
+    text-decoration: none;
+}
+
+.file-item-name:hover {
+    text-decoration: underline;
+}
 
 
 .grid-container {
