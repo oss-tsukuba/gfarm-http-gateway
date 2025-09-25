@@ -308,7 +308,7 @@ function ContextMenu({ x, y, item, actions, onClose }) {
             className="dropdown-menu show"
             role="menu"
             style={{
-                position: "absolute",
+                position: "fixed",
                 left: pos.left,
                 top: pos.top,
                 zIndex: 1050,

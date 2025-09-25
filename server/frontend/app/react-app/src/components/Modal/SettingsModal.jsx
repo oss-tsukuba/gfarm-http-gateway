@@ -3,9 +3,9 @@ import PropTypes from "prop-types";
 import {
     BsSun,
     BsMoon,
-    BsListUl,
-    BsGrid3X3Gap,
-    BsGrid,
+    BsListTask,
+    BsGridFill,
+    BsGrid3X3GapFill,
     BsCalendarDate,
     BsUpload,
 } from "react-icons/bs";
@@ -151,7 +151,7 @@ function SettingsModal({ id = "settingsModal" }) {
                                         className="btn btn-outline-secondary"
                                         htmlFor="view-mode-select-list"
                                     >
-                                        <BsListUl className="me-2" /> List
+                                        <BsListTask className="me-2" /> List
                                     </label>
 
                                     <input
@@ -166,7 +166,8 @@ function SettingsModal({ id = "settingsModal" }) {
                                         className="btn btn-outline-secondary"
                                         htmlFor="view-mode-select-icon_rg"
                                     >
-                                        <BsGrid3X3Gap className="me-2" /> Icon
+                                        <BsGridFill className="me-2" />
+                                        Icon
                                     </label>
 
                                     <input
@@ -181,7 +182,8 @@ function SettingsModal({ id = "settingsModal" }) {
                                         className="btn btn-outline-secondary"
                                         htmlFor="view-mode-select-icon_sm"
                                     >
-                                        <BsGrid className="me-2" /> Icon (small)
+                                        <BsGrid3X3GapFill className="me-2" />
+                                        Icon (small)
                                     </label>
                                 </div>
                             </div>

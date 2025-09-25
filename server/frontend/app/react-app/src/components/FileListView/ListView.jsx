@@ -31,7 +31,7 @@ const RowView = memo(function RowView({
 }) {
     return (
         <div
-            className={`align-middle d-grid file-item ${isLastSelected ? "file-item-active" : ""}`}
+            className={`align-middle d-grid file-list ${isLastSelected ? "file-list-active" : ""}`}
             style={{
                 gridTemplateColumns: "40px 36px 1fr 140px 180px 56px",
                 alignItems: "center",
@@ -108,7 +108,7 @@ const RowSmView = memo(function RowSmView({
 }) {
     return (
         <div
-            className={`align-middle ${isLastSelected ? "file-item-active" : ""}`}
+            className={`align-middle file-list ${isLastSelected ? "file-list-active" : ""}`}
             style={{
                 minHeight: MOBILE_ROW_MIN,
                 padding: "8px 8px",

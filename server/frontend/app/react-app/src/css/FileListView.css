@@ -5,7 +5,6 @@
 
 .file-item:hover {
     background-color: var(--bs-secondary-bg);
-    cursor: pointer;
 }
 
 .file-item-active {
@@ -20,6 +19,26 @@
     background-color: rgba(255, 255, 255, .15);
 }
 
+.file-list {
+    transition: background-color 0.2s;
+}
+
+.file-list:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
+.file-list-active {
+    background-color: var(--bs-secondary-bg-subtle);
+}
+
+[data-bs-theme="dark"] .file-list:hover {
+    background-color: rgba(255, 255, 255, .1);
+}
+
+[data-bs-theme="dark"] .file-list-active {
+    background-color: rgba(255, 255, 255, .15);
+}
+
 .file-item-name {
     display: inline;
     text-decoration: none;
@@ -27,8 +46,13 @@
 
 .file-item-name:hover {
     text-decoration: underline;
+    cursor: pointer;
 }
 
+
+input[type="checkbox"]:hover {
+    cursor: pointer;
+}
 
 .grid-container {
     display: grid;

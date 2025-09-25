@@ -11,7 +11,7 @@ import { BsListTask, BsGridFill, BsGrid3X3GapFill } from "react-icons/bs";
 import { FileItemShape } from "@hooks/useFileList";
 import PropTypes from "prop-types";
 
-const CARD_MIN_REG = 220; // viewMode: icon_rg
+const CARD_MIN_REG = 240; // viewMode: icon_rg
 const CARD_MIN_SM = 150; // viewMode: icon_sm
 const GRID_GAP = 16;
 const ROW_MIN_HEIGHT = 180;
@@ -186,7 +186,7 @@ function IconView({
     const colMin = iconSize === "small" ? CARD_MIN_SM : CARD_MIN_REG;
     const [colCount, setColCount] = useState(1);
     useEffect(() => {
-        const usable = Math.max(0, containerWidth - 1); // minor fudge factor
+        const usable = Math.max(0, containerWidth - GRID_GAP); // minor fudge factor
         const per = colMin + GRID_GAP;
         setColCount(Math.max(1, Math.floor((usable + GRID_GAP) / per))); // account for gaps
     }, [containerWidth, colMin]);
@@ -330,7 +330,7 @@ function IconView({
             {/* Scrollable area. Let VList own the scroll; keep the parent overflow hidden. */}
             <div ref={listRef} className="flex-grow-1 min-vh-0">
                 <VList
-                    style={{ height: "100%", scrollbarGutter: "stable both-edges" }}
+                    style={{ height: "100%", scrollbarGutter: "stable" }}
                     count={rowCount + (hasFiller ? 1 : 0)}
                     overscan={OVERSCAN_PX}
                 >
