@@ -14,29 +14,31 @@ function ACLTab({ item, active, aclData, refreshAcl, refreshAttr }) {
     const [groupList, setGroupList] = useState([]);
 
     useEffect(() => {
-        let active = true;
-        async function fetchSuggestions() {
-            const users = await getUsers();
-            const groups = await getGroups();
-            console.debug("users", users);
-            console.debug("groups", groups);
-            if (active) {
-                setUserList(
-                    users.map((entry) => ({
-                        name: `${decodeURIComponent(entry.name)}`,
-                        value: entry.id,
-                    }))
-                );
-                setGroupList(groups.map((entry) => ({ name: entry, value: entry })));
+        let cancelled = false;
+        if (active) {
+            async function fetchSuggestions() {
+                const users = await getUsers();
+                const groups = await getGroups();
+                console.debug("users", users);
+                console.debug("groups", groups);
+                if (!cancelled) {
+                    setUserList(
+                        users.map((entry) => ({
+                            name: `${decodeURIComponent(entry.name)}`,
+                            value: entry.id,
+                        }))
+                    );
+                    setGroupList(groups.map((entry) => ({ name: entry, value: entry })));
+                }
             }
+
+            fetchSuggestions();
         }
 
-        fetchSuggestions();
-
         return () => {
-            active = false;
+            cancelled = true;
         };
-    }, []);
+    }, [active]);
 
     useEffect(() => {
         if (aclData) setEntries(aclData);
