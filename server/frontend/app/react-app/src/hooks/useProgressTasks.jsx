@@ -4,7 +4,7 @@ import download from "@utils/download";
 import copyFile from "@utils/copy";
 import gfptar from "@utils/archive";
 import { createDir } from "@utils/dircommon";
-import { PARALLEL_LIMIT } from "@utils/config";
+import { useUploadParallelLimit } from "@context/UploadParallelLimitContext";
 import { getParentPath, suggestNewName } from "@utils/func";
 
 function useProgressTasks(refreshItems, addNotification) {
@@ -18,6 +18,7 @@ function useProgressTasks(refreshItems, addNotification) {
     const [downloading, setDownloading] = useState(false);
     const isUploadingRef = useRef(false);
     const isDownloadingRef = useRef(false);
+    const { parallelLimit } = useUploadParallelLimit();
 
     const removeDoneTasks = () => {
         setTasks((prev) => prev.filter((t) => !t.done || t.status === "error"));
@@ -180,7 +181,7 @@ function useProgressTasks(refreshItems, addNotification) {
             };
 
         // Worker pool (parallel uploads within the task)
-        const CONCURRENCY = Math.max(1, PARALLEL_LIMIT);
+        const CONCURRENCY = Math.max(1, parallelLimit);
         let next = 0;
         async function runOne() {
             while (!cancelled) {
@@ -230,41 +231,29 @@ function useProgressTasks(refreshItems, addNotification) {
         refreshItems();
     };
 
-    const runUploadWithLimit = async () => {
+    const runUpload = async () => {
         if (isUploadingRef.current) return;
         isUploadingRef.current = true;
 
-        const running = new Set();
-        const startNext = () => {
-            while (running.size < PARALLEL_LIMIT && uploadQueueRef.current.length > 0) {
+        try {
+            while (uploadQueueRef.current.length > 0) {
                 const fn = uploadQueueRef.current.shift();
-                const p = Promise.resolve()
-                    .then(fn)
-                    .catch((e) => console.error("upload batch failed:", e))
-                    .finally(() => running.delete(p));
-                running.add(p);
+                try {
+                    await fn();
+                } catch (e) {
+                    console.error("upload batch failed:", e);
+                }
             }
-        };
-
-        startNext();
-
-        while (running.size > 0 || uploadQueueRef.current.length > 0) {
-            if (running.size === 0) {
-                startNext();
-                continue;
-            }
-            await Promise.race(running);
-            startNext();
+        } finally {
+            isUploadingRef.current = false;
         }
-
-        isUploadingRef.current = false;
     };
 
     useEffect(() => {
         console.debug("Uploading", uploading);
         if (uploading) {
             setUploading(false);
-            runUploadWithLimit();
+            runUpload();
         }
     }, [uploading]);
 

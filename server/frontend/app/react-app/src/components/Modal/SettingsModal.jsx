@@ -18,7 +18,7 @@ import { PARALLEL_LIMIT } from "@utils/config";
 import { getTimeStr } from "@utils/func";
 
 const LIMIT_MIN = 1;
-const LIMIT_MAX = 12;
+const LIMIT_MAX = 8;
 
 function clamp(n, min, max) {
     return Math.max(min, Math.min(max, n));
