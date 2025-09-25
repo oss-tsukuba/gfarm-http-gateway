@@ -47,7 +47,7 @@ services:
     image: nginx:latest
     ports:
       - "443:443"    # HTTPS
-      # - "8880:8880"  # HTTP
+      # - "8880:8880"  # HTTP (development only)
     volumes:
       # Required: Nginx config
       - ./nginx-for-HPCI-with-sub.conf.sample:/etc/nginx/conf.d/gfarm.conf:ro

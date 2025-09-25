@@ -59,7 +59,7 @@ server {
 
 }
 
-# for HTTP
+# for HTTP (development only)
 # server {
 #   listen 8880;
 #   server_name localhost;
