@@ -144,9 +144,7 @@ function useProgressTasks(refreshItems, addNotification) {
             const overall = Math.floor(sum / Math.max(1, total));
             const lines = extraMsg
                 ? [extraMsg]
-                : perFilePercent
-                      .filter((x) => x && x.value < 100 && x.message)
-                      .map((x) => x.message);
+                : perFilePercent.filter((x) => x && !x.done && x.message).map((x) => x.message);
             setTasks((prev) =>
                 prev.map((task) =>
                     task.taskId === taskId
@@ -196,7 +194,11 @@ function useProgressTasks(refreshItems, addNotification) {
 
                 exec_count++;
                 if (file.is_dir) {
-                    perFilePercent[i] = { value: 100, message: perFilePercent[i]?.message ?? "" };
+                    perFilePercent[i] = {
+                        done: true,
+                        value: 100,
+                        message: perFilePercent[i]?.message ?? "",
+                    };
                     updateOverall();
                     continue;
                 }
@@ -207,7 +209,11 @@ function useProgressTasks(refreshItems, addNotification) {
                 } catch (e) {
                     console.error("uploadFile failed:", e);
                 } finally {
-                    perFilePercent[i] = { value: 100, message: perFilePercent[i]?.message ?? "" };
+                    perFilePercent[i] = {
+                        done: true,
+                        value: 100,
+                        message: perFilePercent[i]?.message ?? "",
+                    };
                     updateOverall();
                 }
             }
