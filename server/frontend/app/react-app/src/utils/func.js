@@ -1,4 +1,9 @@
-import { GFARM_PREFIX } from "@utils/config";
+import {
+    GFARM_PREFIX,
+    PARALLEL_LIMIT,
+    PARALLEL_LIMIT_MIN,
+    PARALLEL_LIMIT_MAX,
+} from "@utils/config";
 
 export const encodePath = (path) => {
     let p = "/" + path.replace(/^\/+/, "").replace(/\/+$/, "");
@@ -494,4 +499,15 @@ export function createLineSplitter() {
             if (this.buffer) controller.enqueue(this.buffer.replace(/\r$/, ""));
         },
     });
+}
+
+function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+}
+
+export function normalizeParallelLimit(raw) {
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return clamp(PARALLEL_LIMIT, PARALLEL_LIMIT_MIN, PARALLEL_LIMIT_MAX);
+
+    return clamp(Math.trunc(num), PARALLEL_LIMIT_MIN, PARALLEL_LIMIT_MAX);
 }

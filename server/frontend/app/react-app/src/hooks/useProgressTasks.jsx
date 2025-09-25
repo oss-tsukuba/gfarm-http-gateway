@@ -5,7 +5,7 @@ import copyFile from "@utils/copy";
 import gfptar from "@utils/archive";
 import { createDir } from "@utils/dircommon";
 import { useUploadParallelLimit } from "@context/UploadParallelLimitContext";
-import { getParentPath, suggestNewName } from "@utils/func";
+import { getParentPath, suggestNewName, normalizeParallelLimit } from "@utils/func";
 
 function useProgressTasks(refreshItems, addNotification) {
     const [tasks, setTasks] = useState([]);
@@ -181,7 +181,8 @@ function useProgressTasks(refreshItems, addNotification) {
             };
 
         // Worker pool (parallel uploads within the task)
-        const CONCURRENCY = Math.max(1, parallelLimit);
+        const CONCURRENCY = normalizeParallelLimit(parallelLimit);
+        console.debug("CONCURRENCY", CONCURRENCY);
         let next = 0;
         async function runOne() {
             while (!cancelled) {

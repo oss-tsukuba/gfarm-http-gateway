@@ -14,15 +14,8 @@ import { useShowHidden } from "@context/ShowHiddenContext";
 import { useViewMode } from "@context/ViewModeContext";
 import { useDateFormat } from "@context/DateFormatContext";
 import { useUploadParallelLimit } from "@context/UploadParallelLimitContext";
-import { PARALLEL_LIMIT } from "@utils/config";
-import { getTimeStr } from "@utils/func";
-
-const LIMIT_MIN = 1;
-const LIMIT_MAX = 8;
-
-function clamp(n, min, max) {
-    return Math.max(min, Math.min(max, n));
-}
+import { PARALLEL_LIMIT, PARALLEL_LIMIT_MIN, PARALLEL_LIMIT_MAX } from "@utils/config";
+import { getTimeStr, normalizeParallelLimit } from "@utils/func";
 
 function SettingsModal({ id = "settingsModal" }) {
     const { theme, setTheme } = useTheme();
@@ -31,8 +24,6 @@ function SettingsModal({ id = "settingsModal" }) {
     const { dateFormat, setDateFormat } = useDateFormat();
     const [frozenNow, setFrozenNow] = useState(null);
     const { parallelLimit, setParallelLimit } = useUploadParallelLimit();
-    const [limitInput, setLimitInput] = useState(String(parallelLimit));
-    useEffect(() => setLimitInput(String(parallelLimit)), [parallelLimit]);
 
     useEffect(() => {
         setFrozenNow(Math.floor(Date.now() / 1000));
@@ -49,19 +40,12 @@ function SettingsModal({ id = "settingsModal" }) {
 
     const handleBlur = (e) => {
         const raw = e.target.value.trim();
-        const n = Number(raw);
-        if (!Number.isFinite(n)) {
-            setLimitInput(String(parallelLimit));
-            return;
-        }
-        const v = clamp(Math.trunc(n), LIMIT_MIN, LIMIT_MAX);
+        const v = normalizeParallelLimit(raw);
         if (v !== parallelLimit) setParallelLimit(v);
-        setLimitInput(String(v));
     };
 
     const handleReset = () => {
         setParallelLimit(PARALLEL_LIMIT);
-        setLimitInput(String(PARALLEL_LIMIT));
     };
 
     return (
@@ -263,11 +247,11 @@ function SettingsModal({ id = "settingsModal" }) {
                                     id="parallel-limit-input"
                                     type="number"
                                     className="form-control"
-                                    min={LIMIT_MIN}
-                                    max={LIMIT_MAX}
+                                    min={PARALLEL_LIMIT_MIN}
+                                    max={PARALLEL_LIMIT_MAX}
                                     step={1}
-                                    value={limitInput}
-                                    onChange={(e) => setLimitInput(e.target.value)}
+                                    value={parallelLimit}
+                                    onChange={(e) => setParallelLimit(e.target.value)}
                                     onBlur={handleBlur}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") e.currentTarget.blur();
@@ -276,7 +260,7 @@ function SettingsModal({ id = "settingsModal" }) {
                                 />
                                 <div className="d-flex align-items-center justify-content-between">
                                     <div className="form-text">
-                                        Allowed range: {LIMIT_MIN} - {LIMIT_MAX}
+                                        Allowed range: {PARALLEL_LIMIT_MIN} - {PARALLEL_LIMIT_MAX}
                                     </div>
                                     <button
                                         type="button"
