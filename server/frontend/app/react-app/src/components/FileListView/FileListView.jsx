@@ -140,8 +140,8 @@ function FileListView({
     );
 
     const handleClick = useCallback(
-        (checked, item) => {
-            if (isTouchDevice) {
+        (checked, item, force = false) => {
+            if (isTouchDevice || force) {
                 handleItemClick(item.path, item.is_file, item.is_dir);
             } else {
                 handleSelectItem(checked, item);

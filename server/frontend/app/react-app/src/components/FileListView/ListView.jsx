@@ -24,6 +24,7 @@ const RowView = memo(function RowView({
     dateFormat,
     onClick,
     onDoubleClick,
+    onCheck,
     onContextMenu,
     openContextMenu,
     closeContextMenu,
@@ -49,7 +50,7 @@ const RowView = memo(function RowView({
                     type="checkbox"
                     id={"checkbox-" + item.name}
                     className="form-check-input"
-                    onChange={(e) => onClick(e.target.checked, item, true)}
+                    onChange={(e) => onCheck(e.target.checked, item)}
                     checked={isSelected}
                 />
             </div>
@@ -70,7 +71,7 @@ const RowView = memo(function RowView({
                     className="file-item-name"
                     onClick={(e) => {
                         e.stopPropagation();
-                        onDoubleClick(item);
+                        onClick(!isSelected, item, true);
                     }}
                 >
                     {item.name}
@@ -101,6 +102,7 @@ const RowSmView = memo(function RowSmView({
     dateFormat,
     onClick,
     onDoubleClick,
+    onCheck,
     onContextMenu,
     openContextMenu,
     closeContextMenu,
@@ -130,7 +132,7 @@ const RowSmView = memo(function RowSmView({
                         type="checkbox"
                         id={"checkbox-" + item.name + "-sm"}
                         className="form-check-input"
-                        onChange={(e) => onClick(e.target.checked, item, true)}
+                        onChange={(e) => onCheck(e.target.checked, item)}
                         checked={isSelected}
                     />
                 </div>
@@ -150,7 +152,15 @@ const RowSmView = memo(function RowSmView({
                         </span>
                         <div>
                             <div className="text-break">
-                                <div className="file-item-name">{item.name}</div>
+                                <div
+                                    className="file-item-name"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClick(!isSelected, item, true);
+                                    }}
+                                >
+                                    {item.name}
+                                </div>
                             </div>
                             <div className="small-info">
                                 <div className="text-muted" style={{ fontSize: "0.8rem" }}>
@@ -289,13 +299,19 @@ function ListView({
 
     // Common row handlers (stable refs)
     const onRowClick = useCallback(
-        (checkedOrToggle, item, isCheckbox = false) => {
-            if (isCheckbox) return handleSelectItem(checkedOrToggle, item);
-            return handleClick(checkedOrToggle, item);
+        (checkedOrToggle, item, force = false) => {
+            return handleClick(checkedOrToggle, item, force);
         },
-        [handleClick, handleSelectItem]
+        [handleClick]
     );
     const onRowDbl = useCallback((item) => handleDoubleClick(item), [handleDoubleClick]);
+
+    const onRowCheck = useCallback(
+        (checkedOrToggle, item) => {
+            return handleSelectItem(checkedOrToggle, item);
+        },
+        [handleSelectItem]
+    );
     const onRowCtx = useCallback(
         (e, item) => {
             e.preventDefault();
@@ -447,6 +463,7 @@ function ListView({
                                         ItemMenuActions={ItemMenuActions}
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
+                                        onCheck={onRowCheck}
                                         onContextMenu={(e) => onRowCtx(e, item)}
                                         openContextMenu={openContextMenu}
                                         closeContextMenu={closeContextMenu}
@@ -498,6 +515,7 @@ function ListView({
                                         ItemMenuActions={ItemMenuActions}
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
+                                        onCheck={onRowCheck}
                                         onContextMenu={(e) => onRowCtx(e, item)}
                                         openContextMenu={openContextMenu}
                                         closeContextMenu={closeContextMenu}
@@ -542,6 +560,7 @@ RowView.propTypes = {
     dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
     onClick: PropTypes.func.isRequired,
     onDoubleClick: PropTypes.func.isRequired,
+    onCheck: PropTypes.func.isRequired,
     onContextMenu: PropTypes.func.isRequired,
     openContextMenu: PropTypes.func.isRequired,
     closeContextMenu: PropTypes.func.isRequired,
@@ -560,6 +579,7 @@ RowSmView.propTypes = {
     dateFormat: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
     onClick: PropTypes.func.isRequired,
     onDoubleClick: PropTypes.func.isRequired,
+    onCheck: PropTypes.func.isRequired,
     onContextMenu: PropTypes.func.isRequired,
     openContextMenu: PropTypes.func.isRequired,
     closeContextMenu: PropTypes.func.isRequired,

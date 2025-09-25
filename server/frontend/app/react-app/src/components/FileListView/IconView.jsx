@@ -71,9 +71,10 @@ const Card = memo(function Card({
             >
                 <div
                     className="file-item-name"
+                    role="button"
                     onClick={(e) => {
                         e.stopPropagation();
-                        onDoubleClick(item);
+                        onClick(!isSelected, item, true);
                     }}
                 >
                     {item.name}
@@ -208,14 +209,19 @@ function IconView({
 
     // ===== Row interaction handlers (stable refs) =====
     const onRowClick = useCallback(
-        (checkedOrToggle, item, isCheckbox = false) => {
-            if (isCheckbox) return handleSelectItem(checkedOrToggle, item);
-            return handleClick(checkedOrToggle, item);
+        (checkedOrToggle, item, force = false) => {
+            return handleClick(checkedOrToggle, item, force);
         },
-        [handleClick, handleSelectItem]
+        [handleClick]
     );
 
     const onRowDbl = useCallback((item) => handleDoubleClick(item), [handleDoubleClick]);
+    const onRowCheck = useCallback(
+        (checkedOrToggle, item) => {
+            return handleSelectItem(checkedOrToggle, item);
+        },
+        [handleSelectItem]
+    );
 
     const onRowCtx = useCallback(
         (e, item) => {
@@ -303,11 +309,11 @@ function IconView({
                                 dateFormat={dateFormat}
                                 onClick={onRowClick}
                                 onDoubleClick={onRowDbl}
+                                onCheck={onRowCheck}
                                 onContextMenu={onRowCtx}
                                 openContextMenu={openContextMenu}
                                 closeContextMenu={closeContextMenu}
                                 isButtonMenuOpenFor={isButtonMenuOpenFor}
-                                onCheck={(checked, it) => handleSelectItem(checked, it)}
                                 iconSize={iconSize === "small" ? "small" : "regular"}
                             />
                         );
