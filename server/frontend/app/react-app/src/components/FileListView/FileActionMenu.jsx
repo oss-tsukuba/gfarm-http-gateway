@@ -233,7 +233,7 @@ function ItemMenu({ item, isOpen, onOpen, onClose }) {
                 onOpen(e.clientX, e.clientY, item);
             }}
         >
-            <BsThreeDots />
+            <BsThreeDots style={{ fontSize: "1.2rem" }} />
         </button>
     );
 }
