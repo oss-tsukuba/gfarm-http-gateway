@@ -90,49 +90,57 @@ export const getDeepestDirs = (dirSet) => {
 export const CollectPathsFromItems = async (items) => {
     const files = [];
 
-    const traverseFileTree = async (item, path = "") => {
-        return new Promise((resolve) => {
-            if (item.isFile) {
-                item.file((file) => {
-                    files.push({
-                        path: path + file.name,
-                        dirPath: path,
-                        name: file.name,
-                        is_file: true,
-                        is_dir: false,
-                        mtime: Math.floor(file.lastModified / 1000),
-                        size: file.size,
-                        file: file,
-                    });
-                    resolve();
-                    console.debug("file", file);
-                });
-            } else if (item.isDirectory) {
-                const currentPath = path + item.name + "/";
-
-                const dirReader = item.createReader();
-                dirReader.readEntries(async (entries) => {
-                    if (entries.length > 0) {
-                        for (const entry of entries) {
-                            await traverseFileTree(entry, path + item.name + "/");
-                        }
-                    } else {
-                        files.push({
-                            path: currentPath,
-                            dirPath: path,
-                            name: item.name,
-                            is_file: false,
-                            is_dir: true,
-                            mtime: null,
-                            size: null,
-                        });
-                    }
-                    resolve();
-                });
-            } else {
-                resolve();
-            }
+    const getFile = (fileEntry) =>
+        new Promise((resolve) => {
+            fileEntry.file((file) => resolve(file));
         });
+
+    const readAllItems = async (dirEntry) => {
+        const reader = dirEntry.createReader();
+        const out = [];
+        while (true) {
+            const batch = await new Promise((resolve) => reader.readEntries(resolve));
+            if (!batch || batch.length === 0) break;
+            out.push(...batch);
+        }
+        return out;
+    };
+
+    const traverseFileTree = async (item, path = "") => {
+        if (item.isFile) {
+            const file = await getFile(item);
+            files.push({
+                path: path + file.name,
+                dirPath: path,
+                name: file.name,
+                is_file: true,
+                is_dir: false,
+                mtime: Math.floor(file.lastModified / 1000),
+                size: file.size,
+                file: file,
+            });
+            console.debug("file", file);
+        } else if (item.isDirectory) {
+            const currentPath = path + item.name + "/";
+            const children = await readAllItems(item);
+            if (children.length === 0) {
+                // keep empty directory
+                files.push({
+                    path: currentPath,
+                    dirPath: path,
+                    name: item.name,
+                    is_file: false,
+                    is_dir: true,
+                    mtime: null,
+                    size: null,
+                });
+                return;
+            }
+
+            for (const child of children) {
+                await traverseFileTree(child, currentPath);
+            }
+        }
     };
 
     const promises = [];
