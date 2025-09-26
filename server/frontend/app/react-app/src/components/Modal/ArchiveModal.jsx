@@ -200,47 +200,49 @@ function ArchiveModal({
                     <div>
                         <div className="mb-3 d-flex flex-wrap">
                             <div className="form-label fw-bold me-2">Operation</div>
-                            <div className="form-check form-check-inline">
-                                <input
-                                    className="form-check-input"
-                                    type="radio"
-                                    name="compressMode"
-                                    id="mode-create"
-                                    value="create"
-                                    checked={compressMode === "create"}
-                                    onChange={() => setCompressMode("create")}
-                                />
-                                <label className="form-check-label" htmlFor="mode-create">
-                                    Create
-                                </label>
-                            </div>
-                            <div className="form-check form-check-inline">
-                                <input
-                                    className="form-check-input"
-                                    type="radio"
-                                    name="compressMode"
-                                    id="mode-update"
-                                    value="update"
-                                    checked={compressMode === "update"}
-                                    onChange={() => setCompressMode("update")}
-                                />
-                                <label className="form-check-label" htmlFor="mode-update">
-                                    Update
-                                </label>
-                            </div>
-                            <div className="form-check form-check-inline">
-                                <input
-                                    className="form-check-input"
-                                    type="radio"
-                                    name="compressMode"
-                                    id="mode-append"
-                                    value="append"
-                                    checked={compressMode === "append"}
-                                    onChange={() => setCompressMode("append")}
-                                />
-                                <label className="form-check-label" htmlFor="mode-append">
-                                    Append
-                                </label>
+                            <div>
+                                <div className="form-check form-check-inline">
+                                    <input
+                                        className="form-check-input"
+                                        type="radio"
+                                        name="compressMode"
+                                        id="mode-create"
+                                        value="create"
+                                        checked={compressMode === "create"}
+                                        onChange={() => setCompressMode("create")}
+                                    />
+                                    <label className="form-check-label" htmlFor="mode-create">
+                                        Create
+                                    </label>
+                                </div>
+                                <div className="form-check form-check-inline">
+                                    <input
+                                        className="form-check-input"
+                                        type="radio"
+                                        name="compressMode"
+                                        id="mode-update"
+                                        value="update"
+                                        checked={compressMode === "update"}
+                                        onChange={() => setCompressMode("update")}
+                                    />
+                                    <label className="form-check-label" htmlFor="mode-update">
+                                        Update
+                                    </label>
+                                </div>
+                                <div className="form-check form-check-inline">
+                                    <input
+                                        className="form-check-input"
+                                        type="radio"
+                                        name="compressMode"
+                                        id="mode-append"
+                                        value="append"
+                                        checked={compressMode === "append"}
+                                        onChange={() => setCompressMode("append")}
+                                    />
+                                    <label className="form-check-label" htmlFor="mode-append">
+                                        Append
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         <div className="mb-3 d-flex">

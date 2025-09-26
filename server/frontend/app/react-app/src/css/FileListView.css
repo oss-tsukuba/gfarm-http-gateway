@@ -54,6 +54,25 @@ input[type="checkbox"]:hover {
     cursor: pointer;
 }
 
+.form-check-input {
+    border: 1px solid var(--bs-secondary-color);
+}
+
+@media (max-width: 576px) { /* bootstrap-sm */
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    .form-check-label {
+        padding-left: .35rem;
+    }
+}
+
+.form-check-input:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+}
+
 .grid-container {
     display: grid;
     gap: 1rem;

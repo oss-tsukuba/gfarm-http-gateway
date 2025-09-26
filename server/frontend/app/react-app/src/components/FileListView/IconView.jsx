@@ -287,7 +287,7 @@ function IconView({
         const rowRef = rowIndex === 0 ? (el) => (firstRowRef.current = el) : undefined;
 
         return (
-            <div className="px-2" ref={rowRef}>
+            <div className="px-1" ref={rowRef}>
                 <div
                     className={gridContainerClass}
                     style={{
