@@ -1,32 +1,32 @@
 # gfarm-http-gateway
 
-HTTP gateway and CLI client for the [Gfarm distributed filesystem](https://github.com/oss-tsukuba/gfarm).
+**HTTP gateway / Web UI / CLI** for the [Gfarm File System](https://github.com/oss-tsukuba/gfarm).  
+gfarm-http-gateway runs **Gfarm client tools on the server side** and exposes them via a REST API and Web UI.  
+Users can access Gfarm from a browser or with the provided CLI **without installing the Gfarm client locally**.  
+Authentication is handled via **OpenID Connect (OIDC)** (with optional SASL for controlled environments).
 
-This repository provides two components:
-- **Server**: `server/` — FastAPI application exposing an HTTP API for Gfarm  
-- **Client**: `client/` — Command-line interface (CLI) for interacting with the gateway API  
-
+This repository contains two components:
+- **server** (`server/`) - FastAPI-based HTTP API gateway with a built-in Web UI; executes Gfarm client commands under the hood
+- **client** (`client/`) - command-line tools that call the gfarm-http-gateway API
 
 ## Features
 
-- Web API for Gfarm
-  - Gfarm: <https://github.com/oss-tsukuba/gfarm>
-- Web UI
-  - File manager: browse, create directories, rename, move, delete, view details
-  - Upload / Download files & folders
-  - Archive / Extract gfarm files with gfptar
-  - Permissions & ACL editor
-- Login with OpenID Connect (OIDC)
-  - OpenID provider: Keycloak, etc.
-- Get an Access Token from the OpenID provider
-- Use the Access Token to access Gfarm filesystem
-- Refresh tokens automatically
+- **Web API**
+  - **OIDC authentication**: IdP redirect, access token acquisition/verification, refresh token rotation
+  - **Gfarm authentication**: authenticate to Gfarm using the access token
+  - **`gf*` command execution**: `gfwhoami`, `gfls`, `gfmkdir`, `gfrmdir`, `gfln`, `gfstat`, `gfreg`, `gfmv`, `gfrm`, `gfexport`, `gfgetfacl`, `gfsetfacl`, `gfchmod`, `gfptar`
+  - **Web UI hosting**
 
+- **Web UI**
+  - **File manager**: browse, rename, move, delete files; browse, create, rename, move, delete directories
+  - **Upload/Download**: transfer files and directories
+  - **Archive management**: create/extract archives on Gfarm using `gfptar`
+  - **Permissions & ACL**: view and edit access control
+  - **Details**: inspect metadata and properties
 
-## Quick Links
+## Related Documents (Component READMEs)
 
-- **Server setup (Docker or manual):**  
-  [server/README.md](./server/README.md)
+For setup, configuration, and detailed usage, see:
 
-- **Client usage (CLI):**  
-  [client/README.md](./client/README.md)
+- **Server:** [server/README.md](./server/README.md) - startup, configuration  
+- **Client:** [client/README.md](./client/README.md) - usage
