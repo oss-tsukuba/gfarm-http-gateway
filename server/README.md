@@ -3,16 +3,16 @@
 ## Prerequisites
 
 To run gfarm-http-gateway, you need:
-- **Gfarm server** with SASL XOAUTH2 enabled  
-  - See: <http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html>  
-- **OpenID Connect provider** (e.g., Keycloak) with client ID, secret, and valid redirect URIs  
+- **Gfarm server** with SASL XOAUTH2 enabled
+  - See: <http://oss-tsukuba.org/gfarm/share/doc/gfarm/html/en/user/auth-sasl.html>
+- **OpenID Connect provider** (e.g., Keycloak) with client ID, secret, and valid redirect URIs
 
 
 ## Configuration variables
 
 ### gfarm-http-gateway
 `gfarm-http-gateway.conf` is required to run gfarm-http-gateway.  
-Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default).  
+Default values are defined in [`gfarm-http-gateway.conf.default`](./gfarm-http-gateway.conf.default).
 
 The configuration file is organized into the following sections:
 
@@ -58,6 +58,10 @@ Choose one of the following options depending on your environment.
 - **Option 3: Run Under a Subpath** - host gfarm-http-gateway at a URL prefix (e.g., `/gfarm`).
 - **Option 4: HPCI Shared Storage** — preconfigured Compose setup for HPCI environments.
 
+> NOTE: If your account is in the `docker` group, run Docker/Compose commands without root; otherwise use `sudo`.  
+> With **rootless Docker**, privileged ports (<1024) can't be bound (e.g., `-p 443:443`); use high ports or a reverse proxy instead.
+
+
 ### Requirements
 
 - Docker
@@ -78,7 +82,7 @@ docker build -t gfarm-http-gateway .
 
 #### 2. Prepare Configuration
 
-Create directories and files in your current working directory: 
+Create directories and files in your current working directory:
 ```
 config/
 ├── gfarm2.conf              # Gfarm client configuration (required)
@@ -119,7 +123,7 @@ docker run --rm --network gfarm-net \
 ```
 
 By default, **gfarm-http-gateway** listens on port 8000 inside the container.  
-To change ports:  
+To change ports:
 ```bash
 docker run --rm \
   -v $(pwd)/config:/config \
@@ -140,7 +144,7 @@ docker run --rm \
 #### 5. Stop containers
 
 To stop gfarm-http-gateway, press `Ctrl + C` if it's running in the foreground.  
-If you ran it in the background (with `-d`), stop it with:  
+If you ran it in the background (with `-d`), stop it with:
 
 ```bash
 docker ps            # find the container ID or name
@@ -150,7 +154,7 @@ docker stop <id-or-name>
 
 ### Option 2: Run Behind NGINX (HTTPS)
 
-Use NGINX as a reverse proxy. This example uses Docker Compose.  
+Use NGINX as a reverse proxy. This example uses Docker Compose.
 
 #### 1. Fetch gfarm-http-gateway
 
@@ -161,7 +165,7 @@ cd gfarm-http-gateway/server
 
 #### 2. Prepare the Configuration
 
-Follow the steps in **[Option 1 > 2. Prepare Configuration](#2-prepare-configuration)** for `config/` and `redis/`.  
+Follow the steps in **[Option 1 > 2. Prepare Configuration](#2-prepare-configuration)** for `config/` and `redis/`.
 
 Place the TLS certificate and key files for NGINX (used for HTTPS termination), e.g.:
 ```bash
@@ -175,7 +179,7 @@ nginx/certs/
 > - `config/certs/` → for gfarm-http-gateway to trust Gfarm
 > - `nginx/certs/` → for NGINX to serve HTTPS to clients
 
-Copy samples and edit: 
+Copy samples and edit:
 ```bash
 cp docker-compose.yaml.sample docker-compose.yaml
 mkdir nginx
@@ -238,7 +242,7 @@ Follow the steps in **[Option 1 > 1. Build the Docker Image and 2. Prepare Confi
 
 > NOTE: `--root-path /gfarm` tells Uvicorn/FastAPI that the app lives under `/gfarm`.
 
-If you use NGINX as a reverse proxy, add a `location /gfarm/` block that preserves `/gfarm` when forwarding:  
+If you use NGINX as a reverse proxy, add a `location /gfarm/` block that preserves `/gfarm` when forwarding:
 ```
 ...
   location /gfarm/ {
@@ -263,9 +267,9 @@ docker compose down
 ### Option 4: Run in HPCI Shared Storage environment
 
 This option is a preset for HPCI Shared Storage. This example uses Docker Compose.  
-**This example (`http://localhost:8080`) is for development/experiments only** and must not be exposed in production.  
+**This example (`http://localhost:8080`) is for development/experiments only** and must not be exposed in production.
 
-For secure deployments, check **Production settings** below and place gfarm-http-gateway behind a reverse proxy with HTTPS enabled.   
+For secure deployments, check **Production settings** below and place gfarm-http-gateway behind a reverse proxy with HTTPS enabled.
 
 #### Production settings
 
@@ -298,7 +302,7 @@ For secure deployments, check **Production settings** below and place gfarm-http
 
 #### 1. Fetch gfarm-http-gateway
 
-Follow the steps in **[Option 2 > 1. Fetch gfarm-http-gateway](#1-fetch-gfarm-http-gateway)**.  
+Follow the steps in **[Option 2 > 1. Fetch gfarm-http-gateway](#1-fetch-gfarm-http-gateway)**.
 
 #### 2. Fetch HPCI Shared Storage config and certificate
 
@@ -328,10 +332,10 @@ docker compose -f docker-compose-for-HPCI.yaml down
 
 ## HPCI Setup Example: with an alternative system
 
-This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, alternative /sub/).
+This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, alternative /sub/).  
 Start Docker with the samples below and adjust IPs/hostnames to your production environment.
 
-This setup uses the following files:  
+This setup uses the following files:
 
 - `docker-compose-for-HPCI-with-sub.yaml`
 - `nginx-for-HPCI-with-sub.conf.sample`
@@ -348,15 +352,15 @@ This setup uses the following files:
 
 **`docker-compose-for-HPCI-with-sub.yaml`:**
 
-- gfarm-http-gateway (main): 
+- gfarm-http-gateway (main):
   - `command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
-- gfarm-http-gateway (alternative): 
+- gfarm-http-gateway (alternative):
   - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips='<REVERSE_PROXY_IP>'`
 
 > NOTE: `<REVERSE_PROXY_IP>`  
-> IP address(es) of every proxy that adds `X-Forwarded-*` to the request.  
-> - Single tier: specify that one IP.  
-> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`.  
+> IP address(es) of every proxy that adds `X-Forwarded-*` to the request.
+> - Single tier: specify that one IP.
+> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`.
 >
 > If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
 
@@ -588,7 +592,7 @@ make test             # run automated tests
 ### Reverse Proxy (required for production)
 
 Run gfarm-http-gateway behind a reverse proxy with HTTPS termination.  
-This section shows an **example configuration** for NGINX.  
+This section shows an **example configuration** for NGINX.
 
 1. Install NGINX
    - RHEL family:
@@ -604,8 +608,8 @@ This section shows an **example configuration** for NGINX.
 
 2. Prepare Configuration
 
-   - Create `/etc/nginx/conf.d/gfarm.conf`  
-   - Use the provided sample [`nginx.conf.sample`](./nginx.conf.sample) as a reference.  
+   - Create `/etc/nginx/conf.d/gfarm.conf`
+   - Use the provided sample [`nginx.conf.sample`](./nginx.conf.sample) as a reference.
    - If serving under a path prefix, see **[Option 3: Run Under a Subpath](#option-3-run-under-a-subpath)** for configuration.
 
 3. Restart NGINX
@@ -666,25 +670,25 @@ gfarm-http-gateway reads `file_icons.json` to decide which icon to display for e
   - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after `npm --prefix frontend/app/react-app run build`.
 
 - **Default file in the source tree**:
-  - `frontend/app/react-app/public/assets/file_icons.json`  
+  - `frontend/app/react-app/public/assets/file_icons.json`
 
 ### Structure
 
-- **category**: maps file extensions to categories  
-  - Example: `"image": ["jpg", "jpeg", "png", "gif"]`  
+- **category**: maps file extensions to categories
+  - Example: `"image": ["jpg", "jpeg", "png", "gif"]`
   - Extensions should be lowercase and written without the dot.
-- **icons**: maps categories to CSS classes for the icon to display  
+- **icons**: maps categories to CSS classes for the icon to display
   - Example: `"image": "bi bi-file-earmark-image"`
-- **css**: the URL of the stylesheet required to load the icons  
+- **css**: the URL of the stylesheet required to load the icons
   - Example: `"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"`
 
 ### Display Rules
 
-- **Folders** always use the icon defined in `icons.folder`.  
-- **Symlinks** (if present) use the icon defined in `icons.symlink`.  
-- **Files** are matched by extension against the categories in `category`.  
-   - If a match is found, the corresponding icon from `icons[category]` is used.  
-   - If no match is found, the `icons.default` class is used.  
+- **Folders** always use the icon defined in `icons.folder`.
+- **Symlinks** (if present) use the icon defined in `icons.symlink`.
+- **Files** are matched by extension against the categories in `category`.
+   - If a match is found, the corresponding icon from `icons[category]` is used.
+   - If no match is found, the `icons.default` class is used.
 
 ### Example
 
@@ -718,7 +722,7 @@ gfarm-http-gateway reads `file_icons.json` to decide which icon to display for e
 ## Custom Login Page
 
 The login page is provided as a Jinja2 template (`templates/login.html`).  
-You can replace this file to customize the login screen.  
+You can replace this file to customize the login screen.
 
 - **How to set this file**:  
   - **Docker**: mount your custom template into the container at `/config/templates/login.html`
