@@ -1,4 +1,5 @@
 import { closeAllModals } from "@utils/func";
+import { RETRY_COUNT, RETRY_INTERVAL } from "@utils/config";
 
 const EXCLUDE_PATHS = [
     /^.*\/login(?:\?.*)?$/,
@@ -10,7 +11,13 @@ const EXCLUDE_PATHS = [
 
 const TRANSIENT_STATUS = new Set([408, 429, 502, 503, 504]);
 
-async function fetch_retry(api_url, options, includeStatus, n = 3, delay = 500) {
+async function fetch_retry(
+    api_url,
+    options,
+    includeStatus,
+    n = RETRY_COUNT,
+    delay = RETRY_INTERVAL
+) {
     try {
         const res = await fetch(api_url, options);
         if (!includeStatus || n === 1 || !TRANSIENT_STATUS.has(res.status)) {
