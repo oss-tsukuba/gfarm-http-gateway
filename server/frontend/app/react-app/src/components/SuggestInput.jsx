@@ -8,6 +8,15 @@ function SuggestInput({ id, value, onChange, suggestions, placeholder = null, di
     const [displayName, setDisplayName] = useState("");
 
     const inputRef = useRef(null);
+    const blurTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (typeof value !== "string") return;
@@ -57,9 +66,21 @@ function SuggestInput({ id, value, onChange, suggestions, placeholder = null, di
                 type="text"
                 className="form-control"
                 value={displayName}
-                onFocus={() => setFocused(true)}
+                onFocus={() => {
+                    if (blurTimeoutRef.current) {
+                        clearTimeout(blurTimeoutRef.current);
+                        blurTimeoutRef.current = null;
+                    }
+                    setFocused(true);
+                }}
                 onBlur={() => {
-                    setTimeout(() => setFocused(false), 100);
+                    if (blurTimeoutRef.current) {
+                        clearTimeout(blurTimeoutRef.current);
+                    }
+                    blurTimeoutRef.current = setTimeout(() => {
+                        setFocused(false);
+                        blurTimeoutRef.current = null;
+                    }, 100);
                 }}
                 onChange={(e) => {
                     setDisplayName(e.target.value);

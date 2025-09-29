@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ROUTE_STORAGE, ROUTE_DOWNLOAD } from "@utils/config";
 import PropTypes from "prop-types";
 
@@ -9,12 +9,30 @@ function URLTab({ item, active }) {
     const [copiedLink, setCopiedLink] = useState(false);
     const [copiedDownload, setCopiedDownload] = useState(false);
     const [copiedAPI, setCopiedAPI] = useState(false);
+    const resetTimersRef = useRef({});
 
-    const handleCopy = (ref, setCopiedFn) => {
+    useEffect(() => {
+        return () => {
+            Object.values(resetTimersRef.current).forEach((timeoutId) => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            });
+            resetTimersRef.current = {};
+        };
+    }, []);
+
+    const handleCopy = (ref, key, setCopiedFn) => {
         if (ref?.current) {
             navigator.clipboard.writeText(ref.current.value);
             setCopiedFn(true);
-            setTimeout(() => setCopiedFn(false), 2000);
+            if (resetTimersRef.current[key]) {
+                clearTimeout(resetTimersRef.current[key]);
+            }
+            resetTimersRef.current[key] = setTimeout(() => {
+                setCopiedFn(false);
+                resetTimersRef.current[key] = null;
+            }, 2000);
         }
     };
 
@@ -39,7 +57,7 @@ function URLTab({ item, active }) {
                         <button
                             className="btn btn-outline-secondary"
                             type="button"
-                            onClick={() => handleCopy(copyLinkRef, setCopiedLink)}
+                            onClick={() => handleCopy(copyLinkRef, "link", setCopiedLink)}
                         >
                             {copiedLink ? "Copied!" : "Copy"}
                         </button>
@@ -62,7 +80,11 @@ function URLTab({ item, active }) {
                                     className="btn btn-outline-secondary"
                                     type="button"
                                     onClick={() =>
-                                        handleCopy(copyDownloadLinkRef, setCopiedDownload)
+                                        handleCopy(
+                                            copyDownloadLinkRef,
+                                            "download",
+                                            setCopiedDownload
+                                        )
                                     }
                                 >
                                     {copiedDownload ? "Copied!" : "Copy"}
@@ -86,7 +108,7 @@ function URLTab({ item, active }) {
                                 <button
                                     className="btn btn-outline-secondary"
                                     type="button"
-                                    onClick={() => handleCopy(copyAPILinkRef, setCopiedAPI)}
+                                    onClick={() => handleCopy(copyAPILinkRef, "api", setCopiedAPI)}
                                 >
                                     {copiedAPI ? "Copied!" : "Copy"}
                                 </button>

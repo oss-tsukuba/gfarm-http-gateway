@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
 import PropTypes from "prop-types";
 
 const NotificationContext = createContext();
@@ -9,23 +9,47 @@ export function useNotifications() {
 
 export function NotificationProvider({ children }) {
     const [notifications, setNotifications] = useState([]);
+    const timeoutsRef = useRef(new Map());
 
-    const addNotification = (name, message, type = "warning") => {
-        const id = Date.now() + Math.random();
-        const notification = { id, name, message, type };
-
-        setNotifications((prev) => [...prev, notification]);
-
-        if (type === "warning") {
-            setTimeout(() => {
-                setNotifications((prev) => prev.filter((n) => n.id !== id));
-            }, 10000);
+    const clearNotificationTimeout = useCallback((id) => {
+        const timeoutId = timeoutsRef.current.get(id);
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutsRef.current.delete(id);
         }
-    };
+    }, []);
 
-    const removeNotification = (id) => {
-        setNotifications((prev) => prev.filter((n) => n.id !== id));
-    };
+    const removeNotification = useCallback(
+        (id) => {
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            clearNotificationTimeout(id);
+        },
+        [clearNotificationTimeout]
+    );
+
+    const addNotification = useCallback(
+        (name, message, type = "warning") => {
+            const id = Date.now() + Math.random();
+            const notification = { id, name, message, type };
+
+            setNotifications((prev) => [...prev, notification]);
+
+            if (type === "warning") {
+                const timeoutId = setTimeout(() => {
+                    removeNotification(id);
+                }, 10000);
+                timeoutsRef.current.set(id, timeoutId);
+            }
+        },
+        [removeNotification]
+    );
+
+    useEffect(() => {
+        return () => {
+            timeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+            timeoutsRef.current.clear();
+        };
+    }, []);
 
     return (
         <NotificationContext value={{ addNotification, removeNotification }}>
