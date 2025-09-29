@@ -346,6 +346,16 @@ try:
 except Exception:
     LOCAL_LOGFILE_COMPRESSION = None
 
+try:
+    HTTP_RETRY_COUNT = conf.GFARM_HTTP_OIDC_RETRY_COUNT
+except Exception:
+    HTTP_RETRY_COUNT = 3
+
+try:
+    HTTP_RETRY_INTERVAL = conf.GFARM_HTTP_OIDC_RETRY_INTERVAL
+except Exception:
+    HTTP_RETRY_INTERVAL = 0.2
+
 GFARM_PREFIX = "gfarm"
 
 
@@ -626,7 +636,11 @@ async def oidc_metadata():
 async def oidc_keys_url():
     if OIDC_KEYS_URL:
         return OIDC_KEYS_URL
-    metadata = await oidc_metadata()
+    try:
+        metadata = await oidc_metadata()
+    except Exception as e:
+        logger.error(f"oidc_keys_url error: {str(e)}")
+        return None
     jwks_uri = metadata.get("jwks_uri")
     if jwks_uri is None:
         logger.error("UNEXPECTED: jwks_uri is None")
@@ -637,7 +651,11 @@ async def oidc_keys_url():
 async def oidc_logout_url():
     if OIDC_LOGOUT_URL:
         return OIDC_LOGOUT_URL
-    metadata = await oidc_metadata()
+    try:
+        metadata = await oidc_metadata()
+    except Exception as e:
+        logger.error(f"oidc_logout_url error: {str(e)}")
+        return None
     logout_url = metadata.get("end_session_endpoint")
     if logout_url is None:
         logger.error("UNEXPECTED: end_session_endpoint is None")
@@ -756,24 +774,48 @@ async def set_token(request: Request, token):
 
 
 USE_HTTPX = True
+TRANSIENT_STATUS = {408, 429, 500, 502, 503, 504}
 
 
-async def http_post(url, data):
-    if USE_HTTPX:
-        async with httpx.AsyncClient(verify=VERIFY_CERT) as client:
-            response = await client.post(url, data=data)
-    else:
-        response = requests.post(url, data=data, verify=VERIFY_CERT)
-    return response
+async def http_request(method, url, data=None,
+                       attempts: int = HTTP_RETRY_COUNT):
+    if not url:
+        raise RuntimeError("empty url")
+    last_exc = None
+    attempts = max(1, attempts)
+    for attempt in range(1, attempts + 1):
+        try:
+            if USE_HTTPX:
+                async with httpx.AsyncClient(verify=VERIFY_CERT) as client:
+                    response = await client.request(method, url, data=data)
+            else:
+                response = requests.request(method, url, data=data,
+                                            verify=VERIFY_CERT)
+        except (httpx.RequestError, requests.exceptions.RequestException) as e:
+            last_exc = e
+            if attempt >= attempts:
+                raise
+            await asyncio.sleep(HTTP_RETRY_INTERVAL)
+            continue
+        if response.status_code in TRANSIENT_STATUS and attempt < attempts:
+            await asyncio.sleep(HTTP_RETRY_INTERVAL)
+            continue
+        return response
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("http_request exhausted retries without response")
+
+
+async def http_post(url, data, ):
+    if not url:
+        raise RuntimeError("empty url")
+    return await http_request("POST", url, data)
 
 
 async def http_get(url):
-    if USE_HTTPX:
-        async with httpx.AsyncClient(verify=VERIFY_CERT) as client:
-            response = await client.get(url)
-    else:
-        response = requests.get(url, verify=VERIFY_CERT)
-    return response
+    if not url:
+        raise RuntimeError("empty url")
+    return await http_request("GET", url)
 
 
 async def acquire_lock_db(token_id: str):
@@ -816,20 +858,25 @@ async def get_rt_from_db(session_ref):
 
 async def use_refresh_token(request: Request, token):
     logger.debug("use_refresh_token is called")
-    if TOKEN_STORE.lower() == "database":
+    using_db = TOKEN_STORE.lower() == "database"
+    token_id = None
+    lock_val = None
+    if using_db:
         token_id = token.get("token_id")
         try:
-            val = await acquire_lock_db(token_id)
+            lock_val = await acquire_lock_db(token_id)
             refresh_token = await get_rt_from_db(token)
             if not refresh_token:
-                await release_lock_db(token_id, val)
+                await release_lock_db(token_id, lock_val)
                 return None
         except Exception:
+            if token_id and lock_val:
+                await release_lock_db(token_id, lock_val)
             raise
     else:
         refresh_token = token.get("refresh_token")
-    meta = await oidc_metadata()
     try:
+        meta = await oidc_metadata()
         data = {
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
@@ -841,15 +888,19 @@ async def use_refresh_token(request: Request, token):
         response.raise_for_status()
         new_token = response.json()
         await set_token(request, new_token)
-
-        if TOKEN_STORE.lower() == "database":
-            await release_lock_db(token_id, val)
-
         return new_token
     except httpx.HTTPError:
         raise
     except requests.exceptions.RequestException:
         raise
+    except Exception:
+        raise
+    finally:
+        if using_db and token_id and lock_val:
+            try:
+                await release_lock_db(token_id, lock_val)
+            except Exception:
+                logger.exception("failed to release refresh_token lock")
 
 
 def jwt_error(msg):
@@ -870,8 +921,11 @@ async def oidc_jwks():
         # timeout
         jwks_cache_time = now
         jwks_url = await oidc_keys_url()
-        response = await http_get(jwks_url)
-        jwks_cache = response.json()
+        try:
+            response = await http_get(jwks_url)
+            jwks_cache = response.json()
+        except Exception as e:
+            logger.error(f"http_get :{str(e)}")
         return jwks_cache
     else:
         logger.debug("use cached jwks")
@@ -1087,7 +1141,11 @@ async def debug_page(request: Request,
 @app.get("/user_info")
 async def user_info(request: Request,
                     authorization: Union[str, None] = Header(default=None)):
-    access_token = await get_access_token(request)
+    try:
+        access_token = await get_access_token(request)
+    except Exception as e:
+        logger.error(f"login error: {str(e)}")
+        request.session["error"] = "Failed to get access_token"
     user = None
     if access_token:
         user = get_user_from_access_token(access_token)
@@ -1124,7 +1182,7 @@ async def user_info(request: Request,
                                      "loginname": user,
                                      "home_directory": home_directory})
 
-    raise HTTPException(status_code=401, detail="failed to get user info")
+    raise HTTPException(status_code=401, detail="Failed to get user info")
 
 
 @app.get("/login")
@@ -1367,7 +1425,11 @@ async def parse_authorization(authz_str: str):
 
 async def switch_auth_from_session(request):
     # get access token from session in cookie
-    access_token = await get_access_token(request)
+    try:
+        access_token = await get_access_token(request)
+    except Exception as e:
+        logger.error(f"login error: {str(e)}")
+        access_token = None
     if access_token is not None:
         authz_type = AUTHZ_TYPE_OAUTH
         user = None

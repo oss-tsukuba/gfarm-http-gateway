@@ -129,6 +129,18 @@ GFARM_HTTP_OIDC_KEYS_URL=
 #     GFARM_HTTP_OIDC_LOGOUT_URL="{GFARM_HTTP_OIDC_BASE_URL}/protocol/openid-connect/logout"
 GFARM_HTTP_OIDC_LOGOUT_URL=
 
+# GFARM_HTTP_OIDC_RETRY_COUNT
+#   Max attempts per OIDC HTTP request (including the first try).
+#     - Network/timeout errors
+#     - Transient HTTP status (408, 429, 500, 502, 503, 504)
+#   default: 3
+GFARM_HTTP_OIDC_RETRY_COUNT=3
+
+# GFARM_HTTP_OIDC_RETRY_INTERVAL
+#   wait interval (in seconds, float allowed) between attempts
+#   default: 0.2
+GFARM_HTTP_OIDC_RETRY_INTERVAL=0.2
+
 # ========================================
 # Tokens
 # ========================================
