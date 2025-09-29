@@ -3,21 +3,24 @@ import FileTypeFilter from "@components/FileListView/FileTypeFilter";
 import DateFilter from "@components/FileListView/DateFilter";
 import UploadMenu from "@components/FileListView/UploadMenu";
 import { FileActionMenu, ContextMenu } from "@components/FileListView/FileActionMenu";
-import ListView from "@components/FileListView//ListView";
-import IconView from "@components/FileListView//IconView";
-import {
-    filterItems,
-    getFileTypes,
-    sortItemsByName,
-    sortItemsBySize,
-    sortItemsByUpdateDate,
-    hasTouchScreen,
-} from "@utils/func";
+import ListView from "@components/FileListView/ListView";
+import IconView from "@components/FileListView/IconView";
+import { hasTouchScreen } from "@utils/func";
 import { useViewMode } from "@context/ViewModeContext";
 import { useUserInfo } from "@context/UserInfoContext";
 import "@css/FileListView.css";
 import { BsHouse } from "react-icons/bs";
+import {
+    useFilteredSortedItems,
+    useContextMenuState,
+    useFileListKeyboardShortcuts,
+} from "@hooks/useFileListView";
 import { FileItemShape } from "@hooks/useFileList";
+import {
+    ItemMenuActionsShape,
+    UploadMenuActionsShape,
+    SelectedMenuActionsShape,
+} from "@components/FileListView/propTypes";
 import PropTypes from "prop-types";
 
 function FileListView({
@@ -36,64 +39,19 @@ function FileListView({
 }) {
     const { viewMode } = useViewMode();
     const { userInfo } = useUserInfo();
-    const isTouchDevice = hasTouchScreen();
+    const isTouchDevice = useMemo(() => hasTouchScreen(), []);
     const [sortDirection, setSortDirection] = useState({ column: "Name", order: "asc" });
     const [filterTypes, setFilterTypes] = useState("");
     const [dateFilter, setDateFilter] = useState("all");
     const headerCheckboxRef = useRef(null);
-    const fileTypes = getFileTypes(currentItems);
-    const filteredItems = useMemo(
-        () => filterItems(currentItems, filterTypes, dateFilter),
-        [currentItems, filterTypes, dateFilter]
+    const { fileTypes, sortedItems } = useFilteredSortedItems(
+        currentItems,
+        filterTypes,
+        dateFilter,
+        sortDirection
     );
-    const sortedItems = useMemo(
-        () =>
-            [...filteredItems].sort((a, b) => {
-                if (sortDirection.column === "Name") {
-                    return sortItemsByName(a, b, sortDirection.order);
-                } else if (sortDirection.column === "Size") {
-                    return sortItemsBySize(a, b, sortDirection.order);
-                } else if (sortDirection.column === "Modified") {
-                    return sortItemsByUpdateDate(a, b, sortDirection.order);
-                }
-                return 0;
-            }),
-        [filteredItems, sortDirection]
-    );
-    const [contextMenu, setContextMenu] = useState({
-        show: false,
-        x: 0,
-        y: 0,
-        item: null,
-        source: null,
-    });
-
-    const openContextMenu = useCallback(
-        (x, y, item, source) => {
-            if (contextMenu.show) {
-                closeContextMenu();
-                requestAnimationFrame(() => setContextMenu({ show: true, x, y, item, source }));
-            } else {
-                setContextMenu({ show: true, x, y, item, source });
-            }
-        },
-        [setContextMenu]
-    );
-
-    const closeContextMenu = useCallback(
-        () =>
-            setContextMenu({
-                show: false,
-                x: 0,
-                y: 0,
-                item: null,
-                source: null,
-            }),
-        [setContextMenu]
-    );
-
-    const isButtonMenuOpenFor = (it) =>
-        !!contextMenu && contextMenu.source === "button" && contextMenu.item?.path === it.path;
+    const { contextMenu, openContextMenu, closeContextMenu, isButtonMenuOpenFor } =
+        useContextMenuState();
 
     useEffect(() => {
         setSelectedItems([]);
@@ -159,60 +117,14 @@ function FileListView({
         [isTouchDevice, handleItemClick]
     );
 
-    useEffect(() => {
-        const handleKeyDownWithSortedItems = (e) => {
-            if (e.key === "a" || e.key === "A") {
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    setSelectedItems(sortedItems);
-                }
-            } else if (e.key === "Escape") {
-                e.preventDefault();
-                setSelectedItems([]);
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDownWithSortedItems);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDownWithSortedItems);
-        };
-    }, [sortedItems]);
-
-    useEffect(() => {
-        const handleKeyDownWithSelectedItems = (e) => {
-            // Ignore input elements
-            const tag = (e.target?.tagName || "").toLowerCase();
-            if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) {
-                return;
-            }
-
-            if (e.key === "Delete") {
-                e.preventDefault();
-                SelectedMenuActions.remove(selectedItems);
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDownWithSelectedItems);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDownWithSelectedItems);
-        };
-    }, [selectedItems, SelectedMenuActions]);
-
-    useEffect(() => {
-        const handleKeyDownWithLastSelectedItem = (e) => {
-            if (e.key === "F2") {
-                e.preventDefault();
-                if (lastSelectedItem) {
-                    ItemMenuActions.rename(lastSelectedItem);
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDownWithLastSelectedItem);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDownWithLastSelectedItem);
-        };
-    }, [lastSelectedItem, ItemMenuActions]);
+    useFileListKeyboardShortcuts({
+        sortedItems,
+        selectedItems,
+        lastSelectedItem,
+        setSelectedItems,
+        SelectedMenuActions,
+        ItemMenuActions,
+    });
 
     return (
         <div className="d-flex flex-column h-100" data-testid="storage-view">
@@ -260,7 +172,6 @@ function FileListView({
                         selectedItems={selectedItems}
                         active={active}
                         lastSelectedItem={lastSelectedItem}
-                        ItemMenuActions={ItemMenuActions}
                         handleClick={handleClick}
                         handleDoubleClick={handleDoubleClick}
                         handleSelectItem={handleSelectItem}
@@ -277,7 +188,6 @@ function FileListView({
                         selectedItems={selectedItems}
                         active={active}
                         lastSelectedItem={lastSelectedItem}
-                        ItemMenuActions={ItemMenuActions}
                         handleClick={handleClick}
                         handleDoubleClick={handleDoubleClick}
                         handleSelectItem={handleSelectItem}
@@ -313,10 +223,10 @@ FileListView.propTypes = {
     selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     setSelectedItems: PropTypes.func.isRequired,
     active: PropTypes.bool.isRequired,
-    lastSelectedItem: FileItemShape.isRequired,
+    lastSelectedItem: PropTypes.oneOfType([FileItemShape, PropTypes.oneOf([null])]).isRequired,
     setLastSelectedItem: PropTypes.func.isRequired,
-    ItemMenuActions: PropTypes.array.isRequired,
-    UploadMenuActions: PropTypes.array.isRequired,
-    SelectedMenuActions: PropTypes.array.isRequired,
+    ItemMenuActions: ItemMenuActionsShape.isRequired,
+    UploadMenuActions: UploadMenuActionsShape.isRequired,
+    SelectedMenuActions: SelectedMenuActionsShape.isRequired,
     handleItemClick: PropTypes.func.isRequired,
 };

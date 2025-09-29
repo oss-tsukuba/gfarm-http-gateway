@@ -10,6 +10,8 @@ import {
     BsLink45Deg,
 } from "react-icons/bs";
 import PropTypes from "prop-types";
+import { UploadMenuActionsShape } from "@components/FileListView/propTypes";
+import { FileItemShape } from "@hooks/useFileList";
 
 function UploadMenu({ actions, uploadDir, currentItems }) {
     const fileInputRef = useRef(null);
@@ -156,7 +158,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
 export default UploadMenu;
 
 UploadMenu.propTypes = {
-    actions: PropTypes.array,
-    uploadDir: PropTypes.string,
-    currentItems: PropTypes.array,
+    actions: UploadMenuActionsShape.isRequired,
+    uploadDir: PropTypes.string.isRequired,
+    currentItems: PropTypes.arrayOf(FileItemShape).isRequired,
 };

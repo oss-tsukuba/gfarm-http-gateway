@@ -14,6 +14,8 @@ import {
     BsLink45Deg,
     BsFileEarmarkPlus,
 } from "react-icons/bs";
+import { ItemMenuActionsShape } from "@components/FileListView/propTypes";
+import { FileItemShape } from "@hooks/useFileList";
 import PropTypes from "prop-types";
 
 function FileActionMenu({ actions, selectedItems }) {
@@ -326,8 +328,8 @@ function ContextMenu({ x, y, item, actions, onClose }) {
 export { FileActionMenu, ItemMenu, ContextMenu };
 
 FileActionMenu.propTypes = {
-    selectedItems: PropTypes.array,
-    actions: PropTypes.array,
+    selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
+    actions: ItemMenuActionsShape.isRequired,
 };
 
 MenuList.propTypes = {
@@ -336,7 +338,7 @@ MenuList.propTypes = {
 };
 
 ItemMenu.propTypes = {
-    item: PropTypes.object,
+    item: FileItemShape.isRequired,
     isOpen: PropTypes.bool.isRequired,
     onOpen: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
@@ -345,7 +347,7 @@ ItemMenu.propTypes = {
 ContextMenu.propTypes = {
     x: PropTypes.number.isRequired,
     y: PropTypes.number.isRequired,
-    item: PropTypes.object.isRequired,
-    actions: PropTypes.object.isRequired,
+    item: FileItemShape.isRequired,
+    actions: ItemMenuActionsShape.isRequired,
     onClose: PropTypes.func.isRequired,
 };

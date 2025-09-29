@@ -369,7 +369,7 @@ IconView.propTypes = {
     sortedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     active: PropTypes.bool,
-    lastSelectedItem: FileItemShape,
+    lastSelectedItem: PropTypes.oneOfType([FileItemShape, PropTypes.oneOf([null])]),
     handleClick: PropTypes.func.isRequired,
     handleDoubleClick: PropTypes.func.isRequired,
     handleSelectItem: PropTypes.func.isRequired,

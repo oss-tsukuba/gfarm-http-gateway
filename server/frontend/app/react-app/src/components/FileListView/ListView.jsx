@@ -191,7 +191,6 @@ function ListView({
     selectedItems,
     active,
     lastSelectedItem,
-    ItemMenuActions,
     handleDoubleClick,
     handleClick,
     handleSelectItem,
@@ -460,7 +459,6 @@ function ListView({
                                         isSelected={isSelected}
                                         isLastSelected={isLastSelected}
                                         dateFormat={dateFormat}
-                                        ItemMenuActions={ItemMenuActions}
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
                                         onCheck={onRowCheck}
@@ -512,7 +510,6 @@ function ListView({
                                         isSelected={isSelected}
                                         isLastSelected={isLastSelected}
                                         dateFormat={dateFormat}
-                                        ItemMenuActions={ItemMenuActions}
                                         onClick={onRowClick}
                                         onDoubleClick={onRowDbl}
                                         onCheck={onRowCheck}
@@ -537,8 +534,7 @@ ListView.propTypes = {
     sortedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     selectedItems: PropTypes.arrayOf(FileItemShape).isRequired,
     active: PropTypes.bool,
-    lastSelectedItem: FileItemShape,
-    ItemMenuActions: PropTypes.array, // tighten if you have a known action shape
+    lastSelectedItem: PropTypes.oneOfType([FileItemShape, PropTypes.oneOf([null])]),
     handleClick: PropTypes.func.isRequired,
     handleDoubleClick: PropTypes.func.isRequired,
     handleSelectItem: PropTypes.func.isRequired,
@@ -569,7 +565,6 @@ RowView.propTypes = {
 
 RowView.defaultProps = {
     isLastSelected: false,
-    ItemMenuActions: [],
 };
 
 RowSmView.propTypes = {
@@ -588,5 +583,4 @@ RowSmView.propTypes = {
 
 RowSmView.defaultProps = {
     isLastSelected: false,
-    ItemMenuActions: [],
 };
