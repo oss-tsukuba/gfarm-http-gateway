@@ -54,7 +54,7 @@ export default async function gfptar(
     };
 
     try {
-        const response = await apiFetch(url, req);
+        const response = await apiFetch(url, req, false);
 
         if (!response.ok) {
             // best-effort detail extraction

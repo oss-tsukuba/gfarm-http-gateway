@@ -1,3 +1,28 @@
+const looksLikeHTML = (msg) => /<\/?[a-z][\s\S]*>/i.test(msg) && /<[^>]+>/.test(msg);
+const stripTags = (msg) =>
+    msg
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<[^>]+>/g, " ");
+
+const decodeEntities = (msg) =>
+    msg
+        .replace(/&nbsp;?/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+
+const collapse = (s) => s.replace(/\s+/g, " ").trim();
+
+const getHtmlTitle = (msg) => {
+    const m = msg.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    return m?.[1] ? collapse(decodeEntities(m[1])) : null;
+};
+
+const truncate = (s, max = 240) => (s.length > max ? s.slice(0, max - 1) + "…" : s);
+
 export default function get_error_message(status_code, detail) {
     console.error(status_code, detail);
     const code = status_code ?? "-";
@@ -11,8 +36,13 @@ export default function get_error_message(status_code, detail) {
         try {
             detail = JSON.parse(s);
         } catch {
-            // Not JSON → Display as is
-            return `${code} : ${detail}`;
+            if (looksLikeHTML(s)) {
+                const title = getHtmlTitle(s);
+                const bodyText = collapse(decodeEntities(stripTags(s)));
+                const summary = truncate(title || bodyText || "Error");
+                return `${code} : ${summary}`;
+            }
+            return `${code} : ${s}`;
         }
     }
 
@@ -30,9 +60,10 @@ export default function get_error_message(status_code, detail) {
     if (fromFields) return fromFields;
 
     try {
-        return `${code} : ${JSON.stringify(detail)}`;
+        const s = JSON.stringify(detail);
+        return `${code} : ${truncate(s, 500)}`;
     } catch {
-        return `${code} : ${String(detail)}`;
+        return `${code} : ${truncate(String(detail), 500)}`;
     }
 }
 

@@ -20,14 +20,18 @@ async function moveItems(files, setError) {
 
         try {
             const url = `${API_URL}/move`;
-            const response = await apiFetch(url, {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
+            const response = await apiFetch(
+                url,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: data,
                 },
-                body: data,
-            });
+                false
+            );
             if (!response.ok) {
                 let detail;
                 try {
