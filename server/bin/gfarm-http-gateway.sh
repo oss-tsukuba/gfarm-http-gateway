@@ -8,7 +8,6 @@ source "${DIR}/gfarm-http-gateway-common.sh"
 
 if ! command -v gfwhoami >/dev/null 2>&1; then
     echo "[ERROR] gfwhoami not found. Please install gfarm and ensure it is in PATH." >&2
-    exit 1
 fi
 
 CONF_FILE="gfarm-http-gateway.conf"
