@@ -22,7 +22,6 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
 
     // To prevent continuous calls and double fetches
     const abortRef = useRef(null);
-    const seenRef = useRef(null);
 
     // Refs to avoid stale closures
     const dirRef = useRef(dirPath);
@@ -42,7 +41,7 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
             setLoading(true);
             setListGetError(null);
             setItems([]);
-            seenRef.current = new Set();
+            const seen = new Set();
 
             try {
                 await getList(
@@ -54,8 +53,8 @@ function useFileList(dirPath, showHidden = true, { batchSize = 200 } = {}) {
                         for (const r of Array.isArray(batch) ? batch : [batch]) {
                             if (!r || r.name === "." || r.name === "..") continue;
                             const key = r.path ?? r.full_path ?? r.name;
-                            if (seenRef.current.has(key)) continue;
-                            seenRef.current.add(key);
+                            if (seen.has(key)) continue;
+                            seen.add(key);
                             next.push(pickListFields(r));
                         }
                         if (next.length) setItems((prev) => [...prev, ...next]);
