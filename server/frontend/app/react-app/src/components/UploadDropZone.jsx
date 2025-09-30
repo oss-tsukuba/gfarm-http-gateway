@@ -164,15 +164,20 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
         if (!selectedItems.length) return null;
 
         return (
-            <ul className="modal-body">
-                {selectedItems.map((item, idx) => (
-                    <li key={idx}>
-                        <strong className="text-break">{item.path}</strong> —{" "}
-                        {formatFileSize(item.size, item.is_dir) || "unknown size"}{" "}
-                        {getTimeStr(item.mtime)}
-                    </li>
-                ))}
-            </ul>
+            <div className="modal-body p-0">
+                <ul
+                    className="list-unstyled m-0 p-3"
+                    style={{ maxHeight: "40vh", overflowY: "auto", overscrollBehavior: "contain" }}
+                >
+                    {selectedItems.map((item) => (
+                        <li key={item.path} className="py-1">
+                            <strong className="text-break">{item.path}</strong> —{" "}
+                            {formatFileSize(item.size, item.is_dir) || "unknown size"}{" "}
+                            {getTimeStr(item.mtime)}
+                        </li>
+                    ))}
+                </ul>
+            </div>
         );
     }, [selectedItems]);
 
