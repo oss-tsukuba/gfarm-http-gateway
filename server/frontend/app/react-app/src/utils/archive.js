@@ -118,7 +118,6 @@ export default async function gfptar(
         }
 
         progressCallback?.({ status: "completed", value: 100, done: true });
-        refresh?.();
     } catch (err) {
         const isAbort = err?.name === "AbortError";
         const message = isAbort
@@ -132,5 +131,7 @@ export default async function gfptar(
         });
         if (isAbort) console.warn("gfptar aborted:", err);
         else console.error("gfptar failed:", err);
+    } finally {
+        if (!isList) refresh?.();
     }
 }

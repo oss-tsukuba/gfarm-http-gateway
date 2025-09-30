@@ -8,38 +8,33 @@ async function removeItem(path, isFile = true) {
         alert("Please input Gfarm path");
     }
     const epath = encodePath(path);
-    try {
-        const url = isFile
-            ? `${API_URL}/file${epath}`
-            : `${API_URL}/file${epath}?force=on&recursive=on`;
-        console.debug("delete url", url);
-        const response = await apiFetch(
-            url,
-            {
-                credentials: "include",
-                method: "DELETE",
-            },
-            false
-        );
-        if (!response.ok) {
-            let detail;
-            try {
-                const ct = response.headers.get("content-type") || "";
-                detail = ct.includes("application/json")
-                    ? (await response.json())?.detail
-                    : await response.text();
-            } catch {
-                // no-op
-            }
-            const message = get_error_message(response.status, detail);
-            throw new Error(message);
+    const url = isFile
+        ? `${API_URL}/file${epath}`
+        : `${API_URL}/file${epath}?force=on&recursive=on`;
+    console.debug("delete url", url);
+    const response = await apiFetch(
+        url,
+        {
+            credentials: "include",
+            method: "DELETE",
+        },
+        false
+    );
+    if (!response.ok) {
+        let detail;
+        try {
+            const ct = response.headers.get("content-type") || "";
+            detail = ct.includes("application/json")
+                ? (await response.json())?.detail
+                : await response.text();
+        } catch {
+            // no-op
         }
-        console.debug("Success (removed)");
-        return null;
-    } catch (error) {
-        console.error(error);
-        return `${error.name} : ${error.message}`;
+        const message = get_error_message(response.status, detail);
+        throw new Error(message);
     }
+    console.debug("Success (removed)");
+    return null;
 }
 
 export default async function removeItems(files, refresh) {
@@ -47,12 +42,15 @@ export default async function removeItems(files, refresh) {
         return null;
     }
 
-    for (const file of files) {
-        const error = await removeItem(file.path, file.is_file);
-        if (error) {
-            return error;
+    try {
+        for (const file of files) {
+            await removeItem(file.path, file.is_file);
         }
+    } catch (error) {
+        console.error(error);
+        return `${error.name} : ${error.message}`;
+    } finally {
+        refresh();
     }
-    refresh();
     return null;
 }
