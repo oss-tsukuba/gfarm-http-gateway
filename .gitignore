@@ -11,6 +11,7 @@ __pycache__
 
 gfarm-http-gateway.conf
 redis.conf
+login-idp-switch.html
 
 server/config/*
 !server/config/.gitkeep

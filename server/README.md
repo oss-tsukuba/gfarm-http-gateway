@@ -358,6 +358,7 @@ Create a working copy and edit as needed:
 cp nginx-for-HPCI-with-sub.conf.sample ./nginx/nginx-for-HPCI-with-sub.conf
 cp gfarm-http-gateway-for-HPCI.conf.sample ./config/gfarm-http-gateway-for-HPCI.conf
 cp gfarm-http-gateway-for-HPCI-sub.conf.sample ./config/gfarm-http-gateway-for-HPCI-sub.conf
+cp templates/login-idp-switch.html.sample ./templates/login-idp-switch.html
 ```
 
 #### Production settings (required)

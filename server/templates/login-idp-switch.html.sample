@@ -28,17 +28,6 @@
         Login with OpenID provider (sub)
       </button>
 
-      <!-- for HTTP -->
-      <!-- <hr class="my-4" />
-      <button id="oidc-btn" class="btn btn-info mb-3 w-100" onclick="location.href='http://localhost:8880/login_oidc'">
-        Login with OpenID provider
-      </button>
-      
-      <hr class="my-4" />
-      
-      <button id="oidc-btn" class="btn btn-info mb-3 w-100" onclick="location.href='http://localhost:8880/sub/login_oidc'">
-        Login with OpenID provider (sub)
-      </button> -->
     </div>
 
     <!-- Install Button, outside the card -->
