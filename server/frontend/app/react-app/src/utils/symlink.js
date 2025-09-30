@@ -28,12 +28,16 @@ async function getSymlink(symlink, get_fullpath) {
 
 async function setSymlink(source, destination) {
     const fullpath = `${API_URL}/symlink`;
-    const response = await apiFetch(fullpath, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, destination }),
-    });
+    const response = await apiFetch(
+        fullpath,
+        {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source, destination }),
+        },
+        false
+    );
     if (!response.ok) {
         let detail;
         try {

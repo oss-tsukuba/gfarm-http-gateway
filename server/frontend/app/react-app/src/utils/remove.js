@@ -13,10 +13,14 @@ async function removeItem(path, isFile = true) {
             ? `${API_URL}/file${epath}`
             : `${API_URL}/file${epath}?force=on&recursive=on`;
         console.debug("delete url", url);
-        const response = await apiFetch(url, {
-            credentials: "include",
-            method: "DELETE",
-        });
+        const response = await apiFetch(
+            url,
+            {
+                credentials: "include",
+                method: "DELETE",
+            },
+            false
+        );
         if (!response.ok) {
             let detail;
             try {
