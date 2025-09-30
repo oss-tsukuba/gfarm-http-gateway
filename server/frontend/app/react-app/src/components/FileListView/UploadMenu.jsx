@@ -23,7 +23,6 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
     const handleFileChange = (e) => {
         showOverlay();
         const targetfiles = Array.from(e.target.files);
-        console.debug("targetfiles:", targetfiles);
         const collectedItems = CollectPathsFromFiles(targetfiles).map((file) => {
             return {
                 ...file,
@@ -34,8 +33,6 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
         if (collectedItems) {
             const res = checkConflicts(collectedItems, currentItems);
 
-            console.debug("res", res);
-            console.debug("collectedFiles", res.incomingItems);
             if (res.hasConflict) {
                 hideOverlay();
                 setSelectedItems(res.incomingItems);
