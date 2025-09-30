@@ -43,7 +43,7 @@ gfarm-http-gateway uses **Redis as a Token Store**.
 Create a working copy and edit as needed:
 
 ```bash
-cp redis.conf.sample ./redis.conf
+cp redis.conf.sample ./redis/redis.conf
 ```
 
 > NOTE: Keep Redis TLS settings consistent with `gfarm-http-gateway.conf` (Database (Redis) section).
@@ -182,7 +182,6 @@ nginx/certs/
 Copy samples and edit:
 ```bash
 cp docker-compose.yaml.sample docker-compose.yaml
-mkdir nginx
 cp nginx.conf.sample ./nginx/gfarm.conf
 ```
 
@@ -309,7 +308,18 @@ Run the following script to download HPCI-specific `gfarm2.conf` and CA certific
 ./download-HPCI-config.sh
 ```
 
-#### 3. Launch with Docker Compose
+#### 3. Prepare Configuration
+
+Create redis.conf in `./redis`:
+```
+redis/
+└── redis.conf               # Redis configuration (required)
+```
+
+- redis.conf
+  - Refer to **[Configuration variables > Redis](#redis)** above
+
+#### 4. Launch with Docker Compose
 
 For running `gfarm-http-gateway` in the HPCI environment, an example Compose file is provided:  
 [`docker-compose-for-HPCI.yaml`](./docker-compose-for-HPCI.yaml)
@@ -538,7 +548,7 @@ See **Configuration variables** above.
   ```bash
   sudo apt-get update
   sudo apt-get install -y redis-server
-  sudo cp ./redis.conf /etc/redis/redis.conf
+  sudo cp ./redis/redis.conf /etc/redis/redis.conf
   sudo chown root:root /etc/redis/redis.conf
   sudo chmod 644 /etc/redis/redis.conf
   sudo systemctl restart redis-server
@@ -549,7 +559,7 @@ See **Configuration variables** above.
   ```bash
   sudo dnf install -y redis
   sudo mkdir -p /etc/redis
-  sudo cp ./redis.conf /etc/redis/redis.conf
+  sudo cp ./redis/redis.conf /etc/redis/redis.conf
   sudo chown root:root /etc/redis/redis.conf
   sudo chmod 644 /etc/redis/redis.conf
   sudo systemctl enable --now redis
@@ -855,8 +865,8 @@ You can build and test gfarm-http-gateway inside the **gfarm/docker/dist** devel
 
    ```bash
    # start
-   cp redis.conf.sample ./redis.conf
-   redis-server ./redis.conf --daemonize yes
+   cp redis.conf.sample ./redis/redis.conf
+   redis-server ./redis/redis.conf --daemonize yes
  
    # check
    redis-cli -h 127.0.0.1 -p 6379 ping  # → PONG
