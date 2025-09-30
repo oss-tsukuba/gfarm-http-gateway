@@ -33,6 +33,7 @@ import threading
 import stat
 import uuid
 import posixpath
+from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 
@@ -870,6 +871,7 @@ async def use_refresh_token(request: Request, token):
                 await release_lock_db(token_id, lock_val)
                 return None
         except Exception:
+            logger.exception("failed to get refresh_token")
             if token_id and lock_val:
                 await release_lock_db(token_id, lock_val)
             raise
@@ -957,7 +959,7 @@ async def verify_token(access_token, use_raise=False):
         )
         return claims
     except Exception as e:
-        logger.debug(f"Access token verification error: {e}")
+        logger.error(f"Access token verification error: {e}")
         if use_raise:
             raise
         return None
@@ -986,7 +988,7 @@ async def is_expired_token(token, use_raise=False):
 
         return (current_time + TOKEN_MIN_VALID_TIME_REMAINING) > exp
     except Exception as e:
-        logger.debug("is_expired_token: " + str(e))
+        logger.exception("is_expired_token: " + str(e))
         return True  # expired
 
 
@@ -1527,6 +1529,10 @@ def get_client_ip_from_env(env):
 
 
 def get_client_ip_from_request(request):
+    # The client's remote address is exposed
+    # as a named two-tuple request.client (or None).
+    # The hostname or IP address: request.client.host
+    # The port number from which the client is connecting: request.client.port
     return request.client.host
 
 
@@ -2900,7 +2906,8 @@ class ZipStreamWriter:
     Stream-like writer for ZipFile that supports async chunk consumption.
     """
     def __init__(self, chunk_size: int = BUFSIZE,
-                 loop: Optional[asyncio.AbstractEventLoop] = None):
+                 loop: Optional[asyncio.AbstractEventLoop] = None,
+                 flush_immediately: bool = False):
         self._buffer = deque()  # A queue for storing byte chunks
         self._closed = False
         self._chunk_size = chunk_size
@@ -2908,18 +2915,25 @@ class ZipStreamWriter:
         self._condition = asyncio.Condition()
         self._lock = threading.Lock()
         self._loop = loop or asyncio.get_running_loop()
+        self._flush_immediately = flush_immediately
 
     def write(self, data: bytes) -> int:
         if self._closed:
             raise ValueError("I/O operation on closed file.")
 
         self._current_chunk.extend(data)
-        if len(self._current_chunk) >= self._chunk_size:
-            with self._lock:
-                while len(self._current_chunk) >= self._chunk_size:
-                    self._buffer.append(
-                        bytes(self._current_chunk[:self._chunk_size]))
-                    del self._current_chunk[:self._chunk_size]
+        appended = False
+        with self._lock:
+            while len(self._current_chunk) >= self._chunk_size:
+                self._buffer.append(
+                    bytes(self._current_chunk[:self._chunk_size]))
+                del self._current_chunk[:self._chunk_size]
+                appended = True
+            if self._flush_immediately and self._current_chunk:
+                self._buffer.append(bytes(self._current_chunk))
+                self._current_chunk.clear()
+                appended = True
+        if appended:
             self._loop.create_task(self._notify())
 
         return len(data)
@@ -2938,7 +2952,10 @@ class ZipStreamWriter:
                         yield self._buffer.popleft()
         # Flush remaining data on exit
         if self._current_chunk:
-            yield bytes(self._current_chunk)
+            with self._lock:
+                data = bytes(self._current_chunk)
+                self._current_chunk.clear()
+                yield data
 
     def close(self):
         self._closed = True
@@ -2966,7 +2983,8 @@ async def zip_export(request: Request,
             raise_gfarm_http_error(opname, err)
         filedatas.append((filepath, info.is_file))
 
-    async def add_entry_to_zip(zipf: zipfile.ZipFile, entry: Gfls_Entry):
+    async def add_entry_to_zip(zipf: zipfile.ZipFile, entry: Gfls_Entry,
+                               loop, executor):
         rel_path = os.path.join(entry.dirname, entry.name)
         rel_path = os.path.normpath(rel_path)
         logger.debug(f"{rel_path}: zipping")
@@ -2979,12 +2997,15 @@ async def zip_export(request: Request,
         if entry.is_sym:
             zipinfo.create_system = 3  # Unix
             zipinfo.external_attr |= 0xA000 << 16  # symlink bit
-            zipf.writestr(zipinfo, entry.linkname.encode())
+            await loop.run_in_executor(
+                executor,
+                lambda: zipf.writestr(zipinfo, entry.linkname.encode()))
         elif entry.is_dir:
             zipinfo.external_attr |= 0x4000 << 16  # directory bit
             if not rel_path.endswith('/'):
                 zipinfo.filename += '/'
-            zipf.writestr(zipinfo, b'')
+            await loop.run_in_executor(
+                executor, lambda: zipf.writestr(zipinfo, b''))
         else:
             try:
                 env = await set_env(request, authorization)
@@ -2995,7 +3016,8 @@ async def zip_export(request: Request,
 
                 def open_zip_entry():
                     return zipf.open(zipinfo, 'w')
-                dest = await asyncio.to_thread(open_zip_entry)
+                dest = await loop.run_in_executor(
+                    executor, lambda: zipf.open(zipinfo, 'w'))
                 try:
                     while True:
                         # Async read from subprocess without blocking the loop
@@ -3004,10 +3026,10 @@ async def zip_export(request: Request,
                         if not chunk:
                             break
                         # Blocking compression/write -> thread
-                        await asyncio.to_thread(dest.write, chunk)
+                        await loop.run_in_executor(executor, dest.write, chunk)
                 finally:
                     # Close the zip entry (blocking) in a thread
-                    await asyncio.to_thread(dest.close)
+                    await loop.run_in_executor(executor, dest.close)
                     logger.debug(f"{rel_path}: done")
                 await stderr_task
                 return_code = await proc.wait()
@@ -3021,11 +3043,14 @@ async def zip_export(request: Request,
                 raise
 
     async def create_zip(zip_writer):
+        executor = ThreadPoolExecutor(max_workers=1)
+        loop = asyncio.get_event_loop()
         try:
-            def open_zip():
-                return zipfile.ZipFile(zip_writer, "w",
-                                       compression=zipfile.ZIP_DEFLATED)
-            zf = await asyncio.to_thread(open_zip)
+            zf = await loop.run_in_executor(
+                executor,
+                lambda: zipfile.ZipFile(zip_writer, "w",
+                                        compression=zipfile.ZIP_DEFLATED)
+            )
             try:
                 for filepath, is_file in filedatas:
                     parent = os.path.dirname(filepath)
@@ -3038,10 +3063,10 @@ async def zip_export(request: Request,
                         if dirname.startswith("/"):
                             dirname = dirname[1:]
                         entry.dirname = os.path.normpath(dirname)
-                        await add_entry_to_zip(zf, entry)
+                        await add_entry_to_zip(zf, entry, loop, executor)
             finally:
                 # Close (writes central directory) -> thread
-                await asyncio.to_thread(zf.close)
+                await loop.run_in_executor(executor, zf.close)
         except Exception as e:
             logger.exception(f"zip build failed: {str(e)}")
         finally:
@@ -3049,7 +3074,8 @@ async def zip_export(request: Request,
 
     async def generate():
         zip_writer = ZipStreamWriter(chunk_size=BUFSIZE,
-                                     loop=asyncio.get_running_loop())
+                                     loop=asyncio.get_running_loop(),
+                                     flush_immediately=True)
         task = asyncio.create_task(create_zip(zip_writer))
         try:
             async for chunk in zip_writer.get_chunks():
@@ -3085,7 +3111,7 @@ async def file_import(gfarm_path: str,
                       authorization: Union[str, None] = Header(default=None),
                       x_csrf_token: Union[str, None] = Header(default=None)):
     check_csrf(request, x_csrf_token)
-    # TODO overwrite=1, defaut 0
+    # TODO overwrite=1, default 0
     opname = "gfreg"
     apiname = "/file"
     gfarm_path = fullpath(gfarm_path)
