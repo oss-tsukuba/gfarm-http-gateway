@@ -56,7 +56,7 @@ Choose one of the following options depending on your environment.
 - **Option 1: Run with Docker** - single container, HTTP only.
 - **Option 2: Run Behind NGINX (HTTPS)** - recommended for production (TLS at NGINX).
 - **Option 3: Run Under a Subpath** - host gfarm-http-gateway at a URL prefix (e.g., `/gfarm`).
-- **Option 4: HPCI Shared Storage** — preconfigured Compose setup for HPCI environments.
+- **Option 4: HPCI Shared Storage** - preconfigured Compose setup for HPCI environments.
 
 > NOTE: If your account is in the `docker` group, run Docker/Compose commands without root; otherwise use `sudo`.  
 > With **rootless Docker**, privileged ports (<1024) can't be bound (e.g., `-p 443:443`); use high ports or a reverse proxy instead.
@@ -344,11 +344,11 @@ Start Docker with the samples below and adjust IPs/hostnames to your production 
 
 This setup uses the following files:
 
-- `docker-compose-for-HPCI-with-sub.yaml`
-- `nginx-for-HPCI-with-sub.conf` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- `templates/login-idp-switch.html` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- `gfarm-http-gateway-for-HPCI.conf` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- `gfarm-http-gateway-for-HPCI-sub.conf` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`docker-compose-for-HPCI-with-sub.yaml`**
+- **`nginx-for-HPCI-with-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`templates/login-idp-switch.html`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
 
 ### Prepare Configuration
 
@@ -403,11 +403,11 @@ This variant is for local development and experiments. It runs two gfarm-http-ga
 
 This setup uses the following files:
 
-- `docker-compose-for-HPCI-dev-with-sub.yaml`
-- `nginx-for-HPCI-dev-with-sub.conf` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
-- `templates/login-idp-switch-dev.html` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
-- `gfarm-http-gateway-for-HPCI-dev.conf` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
-- `gfarm-http-gateway-for-HPCI-dev-sub.conf` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- **`docker-compose-for-HPCI-dev-with-sub.yaml`**
+- **`nginx-for-HPCI-dev-with-sub.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- **`templates/login-idp-switch-dev.html`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI-dev.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI-dev-sub.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
 
 #### Start gfarm-http-gateway with an alternative system
 
