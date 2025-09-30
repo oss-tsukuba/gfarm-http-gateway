@@ -42,7 +42,7 @@ services:
       - "8080:8080"  # HTTP (development only)
     volumes:
       # Required: Nginx config
-      - ./nginx-for-HPCI-dev-with-sub.conf.sample:/etc/nginx/conf.d/gfarm.conf:ro
+      - ./nginx-for-HPCI-dev-with-sub.conf:/etc/nginx/conf.d/gfarm.conf:ro
     depends_on:
       - gfarm-http-gateway
       - gfarm-http-gateway-sub

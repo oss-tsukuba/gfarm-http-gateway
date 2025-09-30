@@ -8,7 +8,7 @@ services:
     # command: --host 0.0.0.0 --port 8080 --root-path /gfarm
     volumes:
       # Required: Gfarm HTTP gateway config
-      - ./gfarm-http-gateway-for-HPCI.conf:/config/gfarm-http-gateway.conf:ro
+      - ./config/gfarm-http-gateway-for-HPCI.conf:/config/gfarm-http-gateway.conf:ro
       # Required: Gfarm config
       - ./config/gfarm2.conf:/config/gfarm2.conf:ro
       # Required: CA certs for Gfarm
@@ -27,7 +27,7 @@ services:
     command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips="*"
     volumes:
       # Required: Gfarm HTTP gateway config
-      - ./gfarm-http-gateway-for-HPCI-sub.conf:/config/gfarm-http-gateway.conf:ro
+      - ./config/gfarm-http-gateway-for-HPCI-sub.conf:/config/gfarm-http-gateway.conf:ro
       # Required: Gfarm config
       - ./config/gfarm2.conf:/config/gfarm2.conf:ro
       # Required: CA certs for Gfarm
