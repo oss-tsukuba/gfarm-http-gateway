@@ -3,7 +3,7 @@ services:
     build:
       context: .
     container_name: gfarm-http-gateway
-    command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips="172.22.0.10"
+    command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips="*"
     # for Run with a Subpath
     # command: --host 0.0.0.0 --port 8080 --root-path /gfarm
     volumes:
@@ -18,8 +18,6 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
-    networks:
-      - gfarm_http_net
 
   gfarm-http-gateway-sub:
     build:
@@ -39,8 +37,6 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
-    networks:
-      - gfarm_http_net
 
   nginx-proxy:
     container_name: nginx-proxy
@@ -74,8 +70,6 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
-    networks:
-      - gfarm_http_net
 
 networks:
   gfarm_http_net:
