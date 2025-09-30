@@ -366,31 +366,30 @@ cp templates/login-idp-switch.html.sample ./templates/login-idp-switch.html
 **`nginx/nginx-for-HPCI-with-sub.conf`:**
 
 - `server_name`: your public FQDN
-- `ssl_certificate` / `ssl_certificate_key`: paths mounted at `/etc/nginx/certs` (e.g., `cert.pem`, `key.pem`).
+- `ssl_certificate` / `ssl_certificate_key`: paths mounted at `/etc/nginx/certs` (e.g., `cert.pem`, `key.pem`)
 
 **`docker-compose-for-HPCI-with-sub.yaml`:**
 
-- gfarm-http-gateway (main):
+- gfarm-http-gateway:
   - `command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
-- gfarm-http-gateway (alternative):
-  - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips='<REVERSE_PROXY_IP>'`
+- gfarm-http-gateway-sub:
+  - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
 
 > NOTE: `<REVERSE_PROXY_IP>`  
 > IP address(es) of every proxy that adds `X-Forwarded-*` to the request.
-> - Single tier: specify that one IP.
-> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`.
->
+> - Single tier: specify that one IP
+> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`
 > If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
 
 **`templates/login-idp-switch.html`:**
 
-- Set the login buttons to your real URLs:
-  - Main: `"location.href='https://<YOUR_HOST>/login_oidc'"`
-  - Alternative: `"location.href='https://<YOUR_HOST>/sub/login_oidc'"`
+- Set the login buttons to your real URLs:  
+  - Main: `location.href='https://<YOUR_HOST>/login_oidc'`  
+  - Alternative: `location.href='https://<YOUR_HOST>/sub/login_oidc'`
 
 **`config/gfarm-http-gateway-for-HPCI*.conf`:**
 
-- Set production values as in [Option 4](#option-4-run-in-hpci-shared-storage-environment):
+- Set production values as in [Option 4](#option-4-run-in-hpci-shared-storage-environment) in the following two files:
   - `gfarm-http-gateway-for-HPCI.conf` (main)
   - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
 
