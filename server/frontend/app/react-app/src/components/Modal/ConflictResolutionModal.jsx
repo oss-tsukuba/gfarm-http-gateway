@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ModalWindow from "@components/Modal/Modal";
 import {
     getParentPath,
@@ -19,7 +19,7 @@ function ConflictResolutionModal({
     existingNames,
 }) {
     const [visible, setVisible] = useState(true);
-    const showItems = getUniqueConflicts(incomingItems);
+    const showItems = useMemo(() => getUniqueConflicts(incomingItems), [incomingItems]);
     console.debug("showItems", showItems);
 
     useEffect(() => {
