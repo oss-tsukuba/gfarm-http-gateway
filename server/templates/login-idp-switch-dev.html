@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login gfarm-http-gateway</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="manifest" href="/assets/manifest.json" />
+</head>
+
+<body>
+  <div class="container d-flex flex-column align-items-center justify-content-center min-vh-100">
+    <!-- Login Card -->
+    <div class="card shadow-sm p-4 mb-3" style="max-width: 400px; width: 100%;">
+      <h2 id="title" class="mb-4 text-center">Login</h2>
+      <div id="error" class="alert alert-danger d-none" role="alert"></div>
+
+      <button id="oidc-btn" class="btn btn-info mb-3 w-100" 
+        onclick="location.href='http://localhost:8080/main/login_oidc'">
+        Login with OpenID provider
+      </button>
+      
+      <hr class="my-4" />
+      
+      <button id="oidc-btn" class="btn btn-info mb-3 w-100"
+        onclick="location.href='http://localhost:8080/sub/login_oidc'">
+        Login with OpenID provider (sub)
+      </button>
+
+      <!-- for HTTP -->
+      <!-- <hr class="my-4" />
+      <button id="oidc-btn" class="btn btn-info mb-3 w-100" onclick="location.href='http://localhost:8880/login_oidc'">
+        Login with OpenID provider
+      </button>
+      
+      <hr class="my-4" />
+      
+      <button id="oidc-btn" class="btn btn-info mb-3 w-100" onclick="location.href='http://localhost:8880/sub/login_oidc'">
+        Login with OpenID provider (sub)
+      </button> -->
+    </div>
+
+    <!-- Install Button, outside the card -->
+    <button id="installBtn" class="btn btn-success" style="display: none;">
+      Add to Home Screen
+    </button>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous">
+  </script>
+  <script>
+    const errorBox = document.getElementById("error");
+    const raw = "{{ error }}";
+    const tmp = document.createElement("textarea");
+    tmp.innerHTML = raw;
+    const decoded = tmp.value;
+
+    if (decoded) {
+      errorBox.textContent = decoded;
+      errorBox.classList.remove("d-none");
+    }
+  </script>
+  <script src="./static/js/pwa.js"></script>
+</body>
+
+</html>

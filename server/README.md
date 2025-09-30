@@ -298,8 +298,6 @@ For secure deployments, check **Production settings** below and place gfarm-http
 - Install a valid TLS certificate for your production hostname and handle TLS at the reverse proxy.
 - Run gfarm-http-gateway behind the reverse proxy; proxy → gfarm-http-gateway communication is HTTP on the internal network.
 
-
-
 #### 1. Fetch gfarm-http-gateway
 
 Follow the steps in **[Option 2 > 1. Fetch gfarm-http-gateway](#1-fetch-gfarm-http-gateway)**.
@@ -330,6 +328,7 @@ This setup:
 docker compose -f docker-compose-for-HPCI.yaml down
 ```
 
+
 ## HPCI Setup Example: with an alternative system
 
 This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, alternative /sub/).  
@@ -338,10 +337,10 @@ Start Docker with the samples below and adjust IPs/hostnames to your production 
 This setup uses the following files:
 
 - `docker-compose-for-HPCI-with-sub.yaml`
-- `nginx-for-HPCI-with-sub.conf.sample`
-- `templates/login-idp-switch.html`
-- `gfarm-http-gateway-for-HPCI.conf`
-- `gfarm-http-gateway-for-HPCI-sub.conf`
+- `nginx-for-HPCI-with-sub.conf.sample` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- `templates/login-idp-switch.html` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- `gfarm-http-gateway-for-HPCI.conf` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- `gfarm-http-gateway-for-HPCI-sub.conf` - referenced by `docker-compose-for-HPCI-with-sub.yaml`
 
 ### Production settings (required)
 
@@ -372,7 +371,6 @@ This setup uses the following files:
 
 **`gfarm-http-gateway-for-HPCI*.conf`:**
 
-
 - Set production values as in [Option 4](#option-4-run-in-hpci-shared-storage-environment):
   - `gfarm-http-gateway-for-HPCI.conf` (main)
   - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
@@ -380,6 +378,24 @@ This setup uses the following files:
 ### Start gfarm-http-gateway with an alternative system
 
 See [Option 4](#option-4-run-in-hpci-shared-storage-environment) and run Docker Compose with `docker-compose-for-HPCI-with-sub.yaml`.
+
+### For development (HTTP)
+
+This variant is for local development and experiments. It runs two gfarm-http-gateway instances on a single host (main `/main`, alternative `/sub`) and uses HTTP. **Do not expose this setup to the Internet.**
+
+This setup uses the following files:
+
+- `docker-compose-for-HPCI-dev-with-sub.yaml`
+- `nginx-for-HPCI-dev-with-sub.conf.sample` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- `templates/login-idp-switch-dev.html` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- `gfarm-http-gateway-for-HPCI-dev.conf` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- `gfarm-http-gateway-for-HPCI-dev-sub.conf` — referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+
+#### Start gfarm-http-gateway with an alternative system
+
+See [Option 4](#option-4-run-in-hpci-shared-storage-environment) and run Docker Compose with `docker-compose-for-HPCI-dev-with-sub.yaml`.
+
+- **After login:** In this example you **always** access the gateway via a subpath. The IdP redirects to `http://localhost:8080/` with the access token. You must append the required subpath **after** `http://localhost:8080/` (e.g., `http://localhost:8080/main/...`, `http://localhost:8080/sub/...`) so that the subpath instance of gfarm-http-gateway picks up the token. If you land on `/` and see a 404, just add the subpath; you don’t need to sign in again.
 
 
 ## Update gfarm-http-gateway and Gfarm client with Docker

@@ -10,6 +10,11 @@ __pycache__
 .pytest_cache
 
 gfarm-http-gateway.conf
+redis.conf
 
-config/
-nginx/
+server/config/*
+!server/config/.gitkeep
+server/nginx/*
+!server/nginx/.gitkeep
+server/redis/*
+!server/redis/.gitkeep

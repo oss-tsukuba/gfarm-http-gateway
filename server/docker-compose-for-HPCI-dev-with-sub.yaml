@@ -3,18 +3,16 @@ services:
     build:
       context: .
     container_name: gfarm-http-gateway
-    command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips="*"
-    # for Run with a Subpath
-    # command: --host 0.0.0.0 --port 8080 --root-path /gfarm
+    command: --host 0.0.0.0 --port 8080 --root-path /main --forwarded-allow-ips="*"
     volumes:
       # Required: Gfarm HTTP gateway config
-      - ./gfarm-http-gateway-for-HPCI.conf:/config/gfarm-http-gateway.conf:ro
+      - ./gfarm-http-gateway-for-HPCI-dev.conf:/config/gfarm-http-gateway.conf:ro
       # Required: Gfarm config
       - ./config/gfarm2.conf:/config/gfarm2.conf:ro
       # Required: CA certs for Gfarm
       - ./config/certs:/config/certs:ro
       # Custom Login Page
-      - ./templates/login-idp-switch.html:/config/templates/login.html
+      - ./templates/login-idp-switch-dev.html:/config/templates/login.html
     depends_on:
       - redis
     restart: unless-stopped
@@ -23,17 +21,16 @@ services:
     build:
       context: .
     container_name: gfarm-http-gateway-sub
-    # for Run with a Subpath
     command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips="*"
     volumes:
       # Required: Gfarm HTTP gateway config
-      - ./gfarm-http-gateway-for-HPCI-sub.conf:/config/gfarm-http-gateway.conf:ro
+      - ./gfarm-http-gateway-for-HPCI-dev-sub.conf:/config/gfarm-http-gateway.conf:ro
       # Required: Gfarm config
       - ./config/gfarm2.conf:/config/gfarm2.conf:ro
       # Required: CA certs for Gfarm
       - ./config/certs:/config/certs:ro
       # Custom Login Page
-      - ./templates/login-idp-switch.html:/config/templates/login.html
+      - ./templates/login-idp-switch-dev.html:/config/templates/login.html
     depends_on:
       - redis
     restart: unless-stopped
@@ -42,14 +39,10 @@ services:
     container_name: nginx-proxy
     image: nginx:latest
     ports:
-      - "443:443"    # HTTPS
-      # - "8880:8880"  # HTTP (development only)
+      - "8080:8080"  # HTTP (development only)
     volumes:
       # Required: Nginx config
-      - ./nginx/nginx-for-HPCI-with-sub.conf:/etc/nginx/conf.d/gfarm.conf:ro
-      # Required for HTTPS: TLS server certs/keys for Nginx
-      # set to ssl_certificate and ssl_certificate_key in Nginx config
-      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx-for-HPCI-dev-with-sub.conf.sample:/etc/nginx/conf.d/gfarm.conf:ro
     depends_on:
       - gfarm-http-gateway
       - gfarm-http-gateway-sub
@@ -60,7 +53,7 @@ services:
     command: ["redis-server", "/config/redis.conf"]
     volumes:
       # Required: Redis configuration
-      - ./redis/redis.conf:/config/redis.conf:ro
+      - ./redis.conf.sample:/config/redis.conf:ro
     healthcheck:
       test: ["CMD", "redis-cli", "PING"]
       interval: 10s
