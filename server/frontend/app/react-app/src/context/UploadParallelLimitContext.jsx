@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { normalizeParallelLimit } from "@utils/func";
 import { PARALLEL_LIMIT } from "@utils/config";
 import PropTypes from "prop-types";
 
@@ -20,6 +21,10 @@ export function UploadParallelLimitProvider({ children }) {
             setParallelLimit(PARALLEL_LIMIT);
         }
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem("parallelLimit", normalizeParallelLimit(parallelLimit));
+    }, [parallelLimit]);
 
     return (
         <UploadParallelLimitContext value={{ parallelLimit, setParallelLimit }}>
