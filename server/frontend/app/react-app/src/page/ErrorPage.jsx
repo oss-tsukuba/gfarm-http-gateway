@@ -32,7 +32,7 @@ function ErrorPage({ error, errorcode = 0 }) {
                 </div>
             )}
             <p>
-                <a href={`${API_URL}/logout`}>Logout</a>
+                <a href={`${API_URL}/logout`}>{errorcode === 401 ? "Return to Login" : "Logout"}</a>
             </p>
         </div>
     );
