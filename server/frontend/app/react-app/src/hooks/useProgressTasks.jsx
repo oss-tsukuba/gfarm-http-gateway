@@ -74,7 +74,7 @@ function useProgressTasks(refreshItems, addNotification) {
         const total = newItems.length;
         let exec_count = 0;
         let cancelled = false;
-        const cancelFns = new Set();
+        const cancelFns = new Map();
         const perFilePercent = Array.from({ length: total }, () => ({ value: 0, message: "" }));
 
         // Wire this task's Cancel
@@ -84,9 +84,9 @@ function useProgressTasks(refreshItems, addNotification) {
                     ? updateTask(task, {
                           onCancel: () => {
                               cancelled = true;
-                              for (const onCancel of Array.from(cancelFns)) {
+                              for (const fn of cancelFns.values()) {
                                   try {
-                                      onCancel();
+                                      fn();
                                   } catch {
                                       console.warn("failed to run onCancel()");
                                   }
@@ -102,6 +102,19 @@ function useProgressTasks(refreshItems, addNotification) {
             const err = await checkPermission(dir);
             if (err) {
                 setError("Upload", err);
+                setTasks((prev) =>
+                    prev.map((task) =>
+                        task.taskId === taskId
+                            ? updateTask(task, {
+                                  status: "error",
+                                  message: err,
+                                  done: true,
+                                  value: 100,
+                                  onCancel: undefined,
+                              })
+                            : task
+                    )
+                );
                 return;
             }
         }
@@ -168,7 +181,7 @@ function useProgressTasks(refreshItems, addNotification) {
                             console.debug("failed to run onCancel()");
                         }
                     };
-                    cancelFns.add(wrapped);
+                    cancelFns.set(idx, wrapped);
                 }
                 const clamp = (n) => Math.max(0, Math.min(100, n ?? 0));
                 perFilePercent[idx] = {
@@ -214,6 +227,7 @@ function useProgressTasks(refreshItems, addNotification) {
                         value: 100,
                         message: perFilePercent[i]?.message ?? "",
                     };
+                    cancelFns.delete(i);
                     updateOverall();
                 }
             }
@@ -227,14 +241,18 @@ function useProgressTasks(refreshItems, addNotification) {
                     ? updateTask(task, {
                           status: cancelled ? "cancelled" : "completed",
                           message: cancelled
-                              ? `(${exec_count}/${newItems.length}) Upload cancelled`
-                              : `(${exec_count}/${newItems.length}) Upload completed`,
+                              ? `(${exec_count}/${total}) Upload cancelled`
+                              : `(${exec_count}/${total}) Upload completed`,
                           done: true,
                           value: 100,
+                          onCancel: undefined,
                       })
                     : task
             )
         );
+        cancelFns.clear();
+        dirInitPromises.clear();
+        uploadDirSet.clear();
         refreshItems();
     };
 
