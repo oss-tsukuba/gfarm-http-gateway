@@ -119,7 +119,6 @@ export const CollectPathsFromItems = async (items) => {
                 size: file.size,
                 file: file,
             });
-            console.debug("file", file);
         } else if (item.isDirectory) {
             const currentPath = path + item.name + "/";
             const children = await readAllItems(item);
@@ -151,11 +150,12 @@ export const CollectPathsFromItems = async (items) => {
         }
     }
     await Promise.all(promises);
+    console.debug("CollectPathsFromItems:", files.length);
     return files;
 };
 
 export const CollectPathsFromFiles = (files) => {
-    console.debug("CollectPathsFromFiles:", files);
+    console.debug("CollectPathsFromFiles:", files.length);
 
     const uploadFiles = files.map((file) => {
         const dirPath = file.webkitRelativePath
@@ -172,7 +172,6 @@ export const CollectPathsFromFiles = (files) => {
             file: file,
         };
     });
-    console.debug("uploadFiles:", uploadFiles);
 
     return uploadFiles;
 };
