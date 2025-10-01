@@ -40,7 +40,7 @@ export default async function copyFile(srcpath, destpath, progressCallback) {
     });
 
     const req = {
-        method: "POST",
+        method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: srcpath, destination: destpath }),

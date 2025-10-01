@@ -25,7 +25,7 @@ async function mockAttrRoute(
         statusCode = 200,
     } = {}
 ) {
-    await mockRoute(page, `${API_URL}/**`, "POST", "/attr" + filepath, {
+    await mockRoute(page, `${API_URL}/**`, "PUT", "/attr" + filepath, {
         validateBody: (body) => {
             expect(typeof body.Mode).toBe("string");
             if (expectedMode) expect(body.Mode).toBe(expectedMode);

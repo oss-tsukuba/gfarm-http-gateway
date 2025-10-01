@@ -18,7 +18,7 @@ async function mockCopyRoute(
         mockResponse = JSON.stringify({ copied: 100, total: 100, done: true }) + "\n",
     }
 ) {
-    await mockRoute(page, `${API_URL}/**`, "POST", "/copy", {
+    await mockRoute(page, `${API_URL}/**`, "PUT", "/copy", {
         validateBody: (body) => {
             expect(typeof body.source).toBe("string");
             expect(typeof body.destination).toBe("string");

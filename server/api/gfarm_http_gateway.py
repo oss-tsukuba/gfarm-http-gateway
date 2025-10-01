@@ -3284,7 +3284,7 @@ async def file_remove(gfarm_path: str,
     return await gfarm_command_standard_response(env, p, opname)
 
 
-@app.post("/copy")
+@app.put("/copy")
 async def file_copy(copy_data: FileOperation,
                     request: Request,
                     authorization: Union[str, None] = Header(default=None)):
@@ -3533,7 +3533,7 @@ async def get_attr(gfarm_path: str,
             raise gfarm_http_error(opname, code, message, stdout, elist)
 
 
-@app.post("/attr/{gfarm_path:path}")
+@app.put("/attr/{gfarm_path:path}")
 async def change_attr(gfarm_path: str,
                       stat: UpdateStat,
                       request: Request,
@@ -3594,7 +3594,7 @@ async def get_acl(gfarm_path: str,
     return JSONResponse(content=acl.model_dump())
 
 
-@app.post("/acl/{gfarm_path:path}")
+@app.put("/acl/{gfarm_path:path}")
 async def set_acl(gfarm_path: str,
                   acl: ACList,
                   request: Request,

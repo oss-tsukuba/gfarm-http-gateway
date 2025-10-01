@@ -21,7 +21,7 @@ async function changeMode(path, mode) {
 
     try {
         const response = await apiFetch(url, {
-            method: "POST",
+            method: "PUT",
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",

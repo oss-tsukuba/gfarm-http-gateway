@@ -713,9 +713,9 @@ async def test_change_attr(mock_claims, mock_exec):
     update_stat = {
         "Mode": mode,
     }
-    response = client.post("/attr/dir/file1.mp4",
-                           json=update_stat,
-                           headers=req_headers_oidc_auth)
+    response = client.put("/attr/dir/file1.mp4",
+                          json=update_stat,
+                          headers=req_headers_oidc_auth)
     assert response.status_code == 200
     args, kwargs = mock_exec.call_args
     assert args == ('gfchmod', mode, "/dir/file1.mp4")
@@ -1046,9 +1046,9 @@ async def test_get_acl(mock_claims, mock_exec):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mock_setfacl", [expect_no_stdout], indirect=True)
 async def test_set_acl(mock_claims, mock_setfacl):
-    response = client.post("/acl/dir/testfile.txt",
-                           json=parsed_acl,
-                           headers=req_headers_oidc_auth)
+    response = client.put("/acl/dir/testfile.txt",
+                          json=parsed_acl,
+                          headers=req_headers_oidc_auth)
     assert response.status_code == 200
     args, kwargs = mock_setfacl.call_args
     assert args == ('gfsetfacl', '-b', '-M', '-', '/dir/testfile.txt')
@@ -1165,9 +1165,9 @@ async def test_file_copy(
         "destination": "/dir2/file2.txt",
     }
 
-    response = client.post("/copy",
-                           json=copy_data,
-                           headers=req_headers_oidc_auth)
+    response = client.put("/copy",
+                          json=copy_data,
+                          headers=req_headers_oidc_auth)
 
     assert response.status_code == 200
     lines = [line async for line in response.aiter_lines()]

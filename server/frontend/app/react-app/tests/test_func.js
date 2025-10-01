@@ -811,9 +811,9 @@ export const handleRoute = async (route, request) => {
         await handleGroupsRoute(route, url);
     } else if (url.includes("/acl") && method === "GET") {
         await handleAclGetRoute(route, url);
-    } else if (url.includes("/acl") && method === "POST") {
+    } else if (url.includes("/acl") && method === "PUT") {
         await handleAclPostRoute(route, url);
-    } else if (url.includes("/copy") && method === "POST") {
+    } else if (url.includes("/copy") && method === "PUT") {
         await handleCopyRoute(route, url);
     } else if (url.includes("/move") && method === "POST") {
         await handleMoveRoute(route, url);

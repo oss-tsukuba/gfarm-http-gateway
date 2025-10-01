@@ -17,7 +17,7 @@ async function mockAclUpdateRoute(
     page,
     { filepath, expectedAclList, statusCode = 200, mockResponse = { message: "ACL updated" } }
 ) {
-    await mockRoute(page, `${API_URL}/**`, "POST", "/acl" + filepath, {
+    await mockRoute(page, `${API_URL}/**`, "PUT", "/acl" + filepath, {
         validateBody: (body) => {
             const aclList = body.acl;
 

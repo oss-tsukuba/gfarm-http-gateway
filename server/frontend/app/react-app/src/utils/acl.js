@@ -8,7 +8,7 @@ export async function set_acl(path, acl) {
     const fullpath = `${API_URL}/acl${epath}`;
     try {
         const response = await apiFetch(fullpath, {
-            method: "POST",
+            method: "PUT",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ acl }),
