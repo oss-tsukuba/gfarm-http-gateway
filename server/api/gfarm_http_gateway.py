@@ -5,6 +5,8 @@ from datetime import datetime
 import gzip
 import json
 import logging
+from logging.handlers import SysLogHandler
+import socket
 import mimetypes
 import os
 from pprint import pformat as pf
@@ -275,23 +277,23 @@ if TOKEN_STORE.lower() == "database":
     REDIS_DB = int(conf.GFARM_HTTP_REDIS_DB)
     REDIS_SSL = str2bool(conf.GFARM_HTTP_REDIS_SSL)
     try:
-        REDIS_SSL_CERTFILE = conf.GFARM_HTTP_REDIS_SSL_CERTFILE
+        REDIS_SSL_CERTFILE = str2none(conf.GFARM_HTTP_REDIS_SSL_CERTFILE)
     except Exception:
         REDIS_SSL_CERTFILE = None
     try:
-        REDIS_SSL_KEYFILE = conf.GFARM_HTTP_REDIS_SSL_KEYFILE
+        REDIS_SSL_KEYFILE = str2none(conf.GFARM_HTTP_REDIS_SSL_KEYFILE)
     except Exception:
         REDIS_SSL_KEYFILE = None
     try:
-        REDIS_SSL_CA_CERTS = conf.GFARM_HTTP_REDIS_SSL_CA_CERTS
+        REDIS_SSL_CA_CERTS = str2none(conf.GFARM_HTTP_REDIS_SSL_CA_CERTS)
     except Exception:
         REDIS_SSL_CA_CERTS = None
     try:
-        REDIS_USERNAME = conf.GFARM_HTTP_REDIS_USERNAME
+        REDIS_USERNAME = str2none(conf.GFARM_HTTP_REDIS_USERNAME)
     except Exception:
         REDIS_USERNAME = None
     try:
-        REDIS_PASSWORD = conf.GFARM_HTTP_REDIS_PASSWORD
+        REDIS_PASSWORD = str2none(conf.GFARM_HTTP_REDIS_PASSWORD)
     except Exception:
         REDIS_PASSWORD = None
 else:
@@ -326,7 +328,7 @@ except Exception:
     REDIS_LOCK_INTERVAL = 1.0
 
 try:
-    LOCAL_LOGFILE = conf.GFARM_HTTP_LOCAL_LOGFILE
+    LOCAL_LOGFILE = str2none(conf.GFARM_HTTP_LOCAL_LOGFILE)
 except Exception:
     LOCAL_LOGFILE = None
 
@@ -346,6 +348,39 @@ try:
         raise
 except Exception:
     LOCAL_LOGFILE_COMPRESSION = None
+
+
+def parse_syslog_address(val):
+    if not val:
+        return None
+    val = val.strip()
+    if val.startswith("/"):
+        return val
+    if ":" in val:
+        host, port = val.rsplit(":", 1)
+        try:
+            return (host, int(port))
+        except ValueError:
+            pass
+    return "/dev/log" if str2bool(val) else None
+
+
+try:
+    SYSLOG = parse_syslog_address(str2none(conf.GFARM_HTTP_SYSLOG))
+except Exception:
+    SYSLOG = None
+
+try:
+    SYSLOG_FACILITY = conf.GFARM_HTTP_SYSLOG_FACILITY
+except Exception:
+    SYSLOG_FACILITY = logging.handlers.SysLogHandler.LOG_LOCAL0
+try:
+    if str(conf.GFARM_HTTP_SYSLOG_SOCK_TYPE).lower() == "tcp":
+        SYSLOG_SOCK_TYPE = socket.SOCK_STREAM
+    else:
+        SYSLOG_SOCK_TYPE = socket.SOCK_DGRAM
+except Exception:
+    SYSLOG_SOCK_TYPE = socket.SOCK_DGRAM
 
 try:
     HTTP_RETRY_COUNT = int(conf.GFARM_HTTP_OIDC_RETRY_COUNT)
@@ -479,6 +514,28 @@ if LOCAL_LOGFILE:
         "compression": LOCAL_LOGFILE_COMPRESSION,
         "enqueue": True,
     })
+
+
+if SYSLOG:
+    syslog_handler = SysLogHandler(
+        address=SYSLOG, facility=SYSLOG_FACILITY, socktype=SYSLOG_SOCK_TYPE)
+
+    def syslog_sink(m):
+        r = m.record
+        rec = logging.LogRecord(
+            name=r["name"],
+            level=r["level"].no,
+            pathname=r["file"].path,
+            lineno=r["line"],
+            msg=r["message"],
+            args=(),
+            exc_info=None,
+        )
+        if r["exception"]:
+            rec.msg += "\n" + str(r["exception"].traceback)
+        syslog_handler.emit(rec)
+    loguru_handlers.append({"sink": syslog_sink, "level": loglevel})
+
 
 logger.configure(handlers=loguru_handlers)
 
@@ -1509,7 +1566,6 @@ async def set_env(request, authorization):
 
     env.update({
         LOG_USERNAME_KEY: user,
-        # https://www.starlette.io/requests/#client-address
         LOG_CLIENT_IP_KEY: ipaddr,
     })
     if DEBUG:
@@ -1529,10 +1585,7 @@ def get_client_ip_from_env(env):
 
 
 def get_client_ip_from_request(request):
-    # The client's remote address is exposed
-    # as a named two-tuple request.client (or None).
-    # The hostname or IP address: request.client.host
-    # The port number from which the client is connecting: request.client.port
+    # https://www.starlette.io/requests/#client-address
     return request.client.host
 
 

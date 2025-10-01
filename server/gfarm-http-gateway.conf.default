@@ -296,6 +296,29 @@ GFARM_HTTP_LOCAL_LOGFILE_RETENTION="10 days"
 #          gz    ... compress rotated files in .gz
 GFARM_HTTP_LOCAL_LOGFILE_COMPRESSION=
 
+# GFARM_HTTP_SYSLOG
+#   Where to send logs via syslog.
+#   value: yes             ... use default Unix-domain socket (/dev/log)
+#          /path/to/socket ... explicit Unix-domain socket path
+#          host:port       ... send via UDP/TCP to a remote syslog server
+#          no              ... syslog disabled
+#   Examples:
+#     GFARM_HTTP_SYSLOG=true
+#     GFARM_HTTP_SYSLOG=/run/systemd/journal/syslog
+#     GFARM_HTTP_SYSLOG=host.docker.internal:514
+GFARM_HTTP_SYSLOG=no
+
+# GFARM_HTTP_SYSLOG_FACILITY
+#   Syslog facility to use. Prefer one of local0..local7 for application logs.
+#   Examples: local0, local1, user, daemon
+#   Default: local0
+GFARM_HTTP_SYSLOG_FACILITY=local0
+
+# GFARM_HTTP_SYSLOG_SOCK_TYPE
+#   Protocol to use when sending to syslog.
+#   value: udp (default), tcp
+GFARM_HTTP_SYSLOG_SOCK_TYPE=udp
+
 # ========================================
 # Development & Debug (for production, keep default values)
 # ========================================
