@@ -1146,10 +1146,7 @@ async def index(request: Request,
     if session_state is not None and code is not None:
         return await oidc_auth_common(request)
 
-    _, _, _, error = await login_check(request, error)
-
-    if error != "":
-        request.session["error"] = error
+    request.session.pop("error", None)
 
     return FileResponse("frontend/app/react-app/dist/index.html")
 
@@ -1313,6 +1310,7 @@ async def logout(request: Request,
     check_csrf(request, state)
     delete_token(request)
     delete_user_passwd(request)
+    request.session.pop("error", None)
     url = request.url_for("login_page")
     return RedirectResponse(url=url)
 
