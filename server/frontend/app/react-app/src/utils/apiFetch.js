@@ -9,7 +9,7 @@ const EXCLUDE_PATHS = [
     /^.*\/groups(?:\?.*)?$/,
 ];
 
-const TRANSIENT_STATUS = new Set([408, 429, 502, 503, 504]);
+export const TRANSIENT_STATUS = new Set([408, 429, 502, 503, 504]);
 
 async function fetch_retry(
     api_url,

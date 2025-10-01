@@ -1,6 +1,6 @@
 import { encodePath } from "@utils/func";
-import { apiFetch } from "@utils/apiFetch";
-import { API_URL } from "@utils/config";
+import { apiFetch, TRANSIENT_STATUS } from "@utils/apiFetch";
+import { API_URL, RETRY_COUNT, RETRY_INTERVAL } from "@utils/config";
 import get_error_message, { ErrorCodes, get_ui_error } from "@utils/error";
 
 // file: file + File
@@ -11,7 +11,6 @@ async function upload(file, fullPath, progressCallback, setError) {
         return;
     }
 
-    const startTime = Date.now();
     const displayPath = fullPath.replace(file.uploadDir + "/", "");
     progressCallback({ value: 0, message: `0 % | 0 sec | 0 bytes/sec\n${displayPath}` });
 
@@ -19,81 +18,124 @@ async function upload(file, fullPath, progressCallback, setError) {
     const uploadUrl = `${API_URL}/file` + epath;
 
     try {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl);
-        xhr.withCredentials = true;
-        xhr.responseType = "json";
-        // timeout
-        // xhr.timeout = 30 * 60 * 1000; // 30 minutes
+        const uploadOnce = () => {
+            const startTime = Date.now();
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", uploadUrl);
+            xhr.withCredentials = true;
+            xhr.responseType = "json";
+            // timeout
+            // xhr.timeout = 30 * 60 * 1000; // 30 minutes
 
-        if (file.file.type) xhr.setRequestHeader("Content-Type", file.file.type);
-        xhr.setRequestHeader("X-File-Timestamp", file.mtime);
+            if (file.file.type) xhr.setRequestHeader("Content-Type", file.file.type);
+            xhr.setRequestHeader("X-File-Timestamp", file.mtime);
 
-        // ---- Progress (upload side) ----
-        xhr.upload.onprogress = (event) => {
-            if (!event.lengthComputable) return;
-            const percent = Math.floor((event.loaded / event.total) * 100);
-            const elapsed = Date.now() - startTime; // msec.
-            const speed = Math.round((event.loaded / elapsed) * 1000);
-            const sec = Math.floor(elapsed / 1000);
-            progressCallback({
-                value: percent,
-                message: `${percent} % | ${sec} sec | ${speed} bytes/sec\n${displayPath}`,
+            // ---- Progress (upload side) ----
+            xhr.upload.onprogress = (event) => {
+                if (!event.lengthComputable) return;
+                const percent = Math.floor((event.loaded / event.total) * 100);
+                const elapsed = Date.now() - startTime; // msec.
+                const speed = Math.round((event.loaded / elapsed) * 1000);
+                const sec = Math.floor(elapsed / 1000);
+                progressCallback({
+                    value: percent,
+                    message: `${percent} % | ${sec} sec | ${speed} bytes/sec\n${displayPath}`,
+                });
+            };
+            // ---- Promise wrapper & cancel ----
+            return new Promise((resolve, reject) => {
+                // expose cancel BEFORE send to avoid race
+                progressCallback({
+                    onCancel: () => {
+                        try {
+                            xhr.abort();
+                        } catch {
+                            console.warn("abort error:", file.name);
+                        }
+                        console.warn("cancel:", file.name);
+                        reject(new Error("cancelled"));
+                    },
+                });
+
+                // Success path
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        progressCallback({ value: 100 });
+                        console.debug("Upload: success");
+                        resolve();
+                    } else {
+                        const detail = xhr.response?.detail;
+                        const msg = get_error_message(xhr.status, detail);
+                        console.error(file.name, msg);
+                        const error = new Error(msg);
+                        error.status = xhr.status;
+                        reject(error);
+                    }
+                };
+                // Network-layer failure (RST/offline/proxy)
+                xhr.onerror = () => {
+                    // status is 0 for network reset / DNS / CORS hard fail
+                    reject(new Error("Network Error; Please check your connection and try again."));
+                };
+
+                // User or programmatic abort (distinct from network reset)
+                xhr.onabort = () => {
+                    console.warn("Upload: cancelled");
+                    resolve();
+                };
+                // Slow link timeout (if timeout > 0)
+                xhr.ontimeout = () => {
+                    reject(new Error("Upload timed out. The connection was too slow or stalled."));
+                };
+                xhr.send(file.file);
             });
         };
+        const maxAttempts = RETRY_COUNT + 1;
 
-        // ---- Promise wrapper & cancel ----
-        return await new Promise((resolve, reject) => {
-            // expose cancel BEFORE send to avoid race
-            progressCallback({
-                onCancel: () => {
-                    try {
-                        xhr.abort();
-                    } catch {
-                        console.warn("abort error:", file.name);
-                    }
-                    console.warn("cancel:", file.name);
-                    reject(new Error("cancelled"));
-                },
-            });
-
-            // Success path
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    progressCallback({ value: 100 });
-                    console.debug("Upload: success");
-                    resolve();
-                } else {
-                    const detail = xhr.response?.detail;
-                    const msg = get_error_message(xhr.status, detail);
-                    console.error(file.name, msg);
-                    reject(new Error(msg));
+        let lastError;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                await uploadOnce();
+                return;
+            } catch (error) {
+                if (error?.message === "cancelled") {
+                    console.warn("Upload cancelled by user, skipping retries.");
+                    return;
                 }
-            };
 
-            // Network-layer failure (RST/offline/proxy)
-            xhr.onerror = () => {
-                // status is 0 for network reset / DNS / CORS hard fail
-                reject(new Error("Network Error; Please check your connection and try again."));
-            };
+                lastError = error;
+                if (shouldNotRetryUpload(error)) {
+                    throw error;
+                }
 
-            // User or programmatic abort (distinct from network reset)
-            xhr.onabort = () => {
-                console.warn("Upload: cancelled");
-                resolve();
-            };
+                if (attempt < RETRY_COUNT) {
+                    console.warn(
+                        `Upload attempt ${attempt + 1} failed; retrying (${attempt + 2}/${maxAttempts}).`,
+                        error
+                    );
+                    progressCallback({
+                        value: 0,
+                        message: `Retrying upload (attempt ${attempt + 2} of ${maxAttempts})\n${displayPath}`,
+                    });
+                    await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL));
+                } else {
+                    throw error;
+                }
+            }
+        }
 
-            // Slow link timeout (if timeout > 0)
-            xhr.ontimeout = () => {
-                reject(new Error("Upload timed out. The connection was too slow or stalled."));
-            };
-
-            xhr.send(file.file);
-        });
+        if (lastError) throw lastError;
     } catch (error) {
         console.error("Cannot upload:", error);
         setError(file.name, `${error.name} : ${error.message}`);
     }
+}
+
+function shouldNotRetryUpload(err) {
+    const status = err?.status ?? 0;
+    if (status === 0) return false;
+    if (TRANSIENT_STATUS.has(status)) return false;
+    return true;
 }
 
 async function checkPermission(uploadDir) {
