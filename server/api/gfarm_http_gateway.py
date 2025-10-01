@@ -36,6 +36,7 @@ import stat
 import uuid
 import posixpath
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 
 from loguru import logger
 
@@ -3060,7 +3061,12 @@ async def zip_export(request: Request,
             await loop.run_in_executor(
                 executor, lambda: zipf.writestr(zipinfo, b''))
         else:
+            proc = None
+            stderr_task = None
+            dest = None
             try:
+                if await request.is_disconnected():
+                    raise asyncio.CancelledError
                 env = await set_env(request, authorization)
                 proc, _ = await gfexport(env, entry.path)
                 elist = []
@@ -3071,29 +3077,52 @@ async def zip_export(request: Request,
                     return zipf.open(zipinfo, 'w')
                 dest = await loop.run_in_executor(
                     executor, lambda: zipf.open(zipinfo, 'w'))
-                try:
+                if dest:
                     while True:
                         # Async read from subprocess without blocking the loop
                         chunk = await asyncio.wait_for(
-                            proc.stdout.read(BUFSIZE), timeout=60)
+                            proc.stdout.read(BUFSIZE), timeout=180)
                         if not chunk:
                             break
                         # Blocking compression/write -> thread
                         await loop.run_in_executor(executor, dest.write, chunk)
-                finally:
-                    # Close the zip entry (blocking) in a thread
                     await loop.run_in_executor(executor, dest.close)
-                    logger.debug(f"{rel_path}: done")
+                dest = None
+                logger.debug(f"{rel_path}: done")
                 await stderr_task
                 return_code = await proc.wait()
                 if return_code != 0:
                     raise classify_gfarm_error(elist)
+            except asyncio.CancelledError:
+                logger.info(
+                    f"{ipaddr}:0 user={user}, cmd={opname}, "
+                    f"path={entry.path}, zip entry cancelled")
+                raise
             except Exception as e:
                 message = f"zip create error: path={entry.path}: {str(e)}"
-                logger.debug(
-                    f"{ipaddr}:0 user={user}, cmd={opname}, " +
+                logger.error(
+                    f"{ipaddr}:0 user={user}, cmd={opname}, "
                     f" message={message}")
                 raise
+            finally:
+                # stop the process if still alive
+                if proc and proc.returncode is None:
+                    with contextlib.suppress(ProcessLookupError):
+                        proc.kill()
+                # stop stderr task
+                if stderr_task:
+                    stderr_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await stderr_task
+                # close entry handle if left open
+                if dest:
+                    with contextlib.suppress(Exception):
+                        await loop.run_in_executor(executor, dest.close)
+                # wait for process to collect (avoid zombies)
+                if proc and proc.returncode is None:
+                    with contextlib.suppress(ProcessLookupError,
+                                             ChildProcessError):
+                        await proc.wait()
 
     async def create_zip(zip_writer):
         executor = ThreadPoolExecutor(max_workers=1)
@@ -3133,22 +3162,26 @@ async def zip_export(request: Request,
         try:
             async for chunk in zip_writer.get_chunks():
                 if await request.is_disconnected():
+                    logger.info(
+                        f"{ipaddr}:0 user={user}, cmd={opname}, "
+                        "zip export cancelled: client disconnected")
                     raise asyncio.CancelledError
                 logger.debug("zip: generate(): yield")
                 yield chunk
-        except Exception:
+        except Exception as e:
             task.cancel()
-            await task
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(task)
+            if isinstance(e, asyncio.CancelledError):
+                logger.info(
+                    f"{ipaddr}:0 user={user}, cmd={opname},"
+                    " zip export cancelled")
             raise
 
-    single_dir = len(filedatas) == 1 and not filedatas[0][1]
     date_str = datetime.now().strftime('%Y%m%d-%H%M%S')
-    if single_dir:
-        target_dir = filedatas[0][0].rstrip("/")
-        base_folder_name = os.path.basename(target_dir) or "download"
-        zipname = f"{base_folder_name}_{date_str}.zip"
-    else:
-        zipname = f"{GFARM_PREFIX}_{date_str}.zip"
+    target_dir = filedatas[0][0].rstrip("/")
+    base_folder_name = os.path.basename(target_dir) or "download"
+    zipname = f"{base_folder_name}_{date_str}.zip"
     headers = {"Content-Disposition": f'attachment; filename="{zipname}"'}
     return StreamingResponse(
         content=generate(),
@@ -3796,7 +3829,8 @@ async def archive_files(
                                      "error": elist})
                 yield j_line + '\n'
         except asyncio.CancelledError:
-            p.terminate()
+            with contextlib.suppress(ProcessLookupError):
+                p.terminate()
             logger.error(
                 f"{ipaddr}:0 user={user}, cmd={opname}, Client disconnected")
         finally:
