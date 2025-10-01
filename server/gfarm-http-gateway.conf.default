@@ -129,12 +129,12 @@ GFARM_HTTP_OIDC_KEYS_URL=
 #     GFARM_HTTP_OIDC_LOGOUT_URL="{GFARM_HTTP_OIDC_BASE_URL}/protocol/openid-connect/logout"
 GFARM_HTTP_OIDC_LOGOUT_URL=
 
-# GFARM_HTTP_OIDC_RETRY_COUNT
-#   Max attempts per OIDC HTTP request (including the first try).
+# GFARM_HTTP_OIDC_MAX_ATTEMPTS
+#   Max attempts per OIDC HTTP request.
 #     - Network/timeout errors
 #     - Transient HTTP status (408, 429, 500, 502, 503, 504)
 #   default: 3
-GFARM_HTTP_OIDC_RETRY_COUNT=3
+GFARM_HTTP_OIDC_MAX_ATTEMPTS=3
 
 # GFARM_HTTP_OIDC_RETRY_INTERVAL
 #   wait interval (in seconds, float allowed) between attempts
@@ -247,10 +247,10 @@ GFARM_HTTP_REDIS_PASSWORD=
 #   default: 5
 GFARM_HTTP_REDIS_LOCK_TTL=5
 
-# GFARM_HTTP_REDIS_LOCK_RETRY_COUNT
-#   number of times to retry acquiring a lock before failing
+# GFARM_HTTP_REDIS_LOCK_MAX_ATTEMPTS
+#   Maximum attempts to acquire the lock before giving up.
 #   default: 10
-GFARM_HTTP_REDIS_LOCK_RETRY_COUNT=10
+GFARM_HTTP_REDIS_LOCK_MAX_ATTEMPTS=10
 
 # GFARM_HTTP_REDIS_LOCK_INTERVAL
 #   wait interval (in seconds, float allowed) between retries

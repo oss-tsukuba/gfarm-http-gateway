@@ -320,9 +320,9 @@ try:
 except Exception:
     REDIS_LOCK_TTL = 5
 try:
-    REDIS_LOCK_RETRY_COUNT = int(conf.GFARM_HTTP_REDIS_LOCK_RETRY_COUNT)
+    REDIS_LOCK_MAX_ATTEMPTS = int(conf.GFARM_HTTP_REDIS_LOCK_MAX_ATTEMPTS)
 except Exception:
-    REDIS_LOCK_RETRY_COUNT = 10
+    REDIS_LOCK_MAX_ATTEMPTS = 10
 try:
     REDIS_LOCK_INTERVAL = float(conf.GFARM_HTTP_REDIS_LOCK_INTERVAL)  # seconds
 except Exception:
@@ -384,9 +384,9 @@ except Exception:
     SYSLOG_SOCK_TYPE = socket.SOCK_DGRAM
 
 try:
-    HTTP_RETRY_COUNT = int(conf.GFARM_HTTP_OIDC_RETRY_COUNT)
+    HTTP_MAX_ATTEMPTS = int(conf.GFARM_HTTP_OIDC_MAX_ATTEMPTS)
 except Exception:
-    HTTP_RETRY_COUNT = 3
+    HTTP_MAX_ATTEMPTS = 3
 
 try:
     HTTP_RETRY_INTERVAL = float(conf.GFARM_HTTP_OIDC_RETRY_INTERVAL)
@@ -837,7 +837,7 @@ TRANSIENT_STATUS = {408, 429, 500, 502, 503, 504}
 
 
 async def http_request(method, url, data=None,
-                       attempts: int = HTTP_RETRY_COUNT):
+                       attempts: int = HTTP_MAX_ATTEMPTS):
     if not url:
         raise RuntimeError("empty url")
     last_exc = None
@@ -883,7 +883,7 @@ async def acquire_lock_db(token_id: str):
     store = app.state.redis
     res, val = await store.acquire_lock(key=token_id,
                                         ttl=REDIS_LOCK_TTL,
-                                        retry_count=REDIS_LOCK_RETRY_COUNT,
+                                        retry_count=REDIS_LOCK_MAX_ATTEMPTS,
                                         retry_interval=REDIS_LOCK_INTERVAL)
     if res:
         return val
@@ -2857,8 +2857,8 @@ async def dir_remove(gfarm_path: str,
 
 # BUFSIZE = 1
 # BUFSIZE = 65536
-# BUFSIZE = 1024 * 1024
-BUFSIZE = 128 * 1024
+BUFSIZE = 1024 * 1024
+ZIP_BUFSIZE = 1024 * 1024
 
 ASYNC_GFEXPORT = str2bool(conf.GFARM_HTTP_ASYNC_GFEXPORT)
 
@@ -2957,7 +2957,7 @@ class ZipStreamWriter:
     """
     Stream-like writer for ZipFile that supports async chunk consumption.
     """
-    def __init__(self, chunk_size: int = BUFSIZE,
+    def __init__(self, chunk_size: int = ZIP_BUFSIZE,
                  loop: Optional[asyncio.AbstractEventLoop] = None,
                  flush_immediately: bool = False):
         self._buffer = deque()  # A queue for storing byte chunks
@@ -3153,8 +3153,7 @@ async def zip_export(request: Request,
             zip_writer.close()
 
     async def generate():
-        zip_writer = ZipStreamWriter(chunk_size=BUFSIZE,
-                                     loop=asyncio.get_running_loop(),
+        zip_writer = ZipStreamWriter(loop=asyncio.get_running_loop(),
                                      flush_immediately=True)
         task = asyncio.create_task(create_zip(zip_writer))
         try:
