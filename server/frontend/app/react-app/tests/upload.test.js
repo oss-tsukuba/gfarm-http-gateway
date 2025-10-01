@@ -328,7 +328,7 @@ test("Should upload a file via drag-and-drop and confirm in the modal", async ({
 
     const modal = page.locator('[data-testid="dropzone-modal"]');
     await expect(modal).toBeVisible();
-    await expect(modal.locator("ul.modal-body strong")).toContainText(testFileName);
+    await expect(modal.locator("ul")).toContainText(testFileName);
 
     await modal.locator('[data-testid="modal-button-confirm"]').click();
 
