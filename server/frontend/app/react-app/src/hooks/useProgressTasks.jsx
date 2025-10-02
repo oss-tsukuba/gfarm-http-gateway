@@ -224,7 +224,7 @@ function useProgressTasks(refreshItems, addNotification) {
                 } finally {
                     perFilePercent[i] = {
                         done: true,
-                        value: 100,
+                        value: perFilePercent[i]?.value ?? 0,
                         message: perFilePercent[i]?.message ?? "",
                     };
                     cancelFns.delete(i);
@@ -235,16 +235,16 @@ function useProgressTasks(refreshItems, addNotification) {
         await Promise.all(Array.from({ length: CONCURRENCY }, () => runOne()));
 
         // finish
+        const completed = perFilePercent.filter((x) => x && x.done && x.value >= 100).length;
         setTasks((prev) =>
             prev.map((task) =>
                 task.taskId === taskId
                     ? updateTask(task, {
                           status: cancelled ? "cancelled" : "completed",
                           message: cancelled
-                              ? `(${exec_count}/${total}) Upload cancelled`
-                              : `(${exec_count}/${total}) Upload completed`,
+                              ? `(${completed}/${total}) Upload cancelled`
+                              : `(${completed}/${total}) Upload completed`,
                           done: true,
-                          value: 100,
                           onCancel: undefined,
                       })
                     : task
