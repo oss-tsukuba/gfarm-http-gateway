@@ -139,7 +139,7 @@ GFARM_HTTP_OIDC_MAX_ATTEMPTS=3
 # GFARM_HTTP_OIDC_RETRY_INTERVAL
 #   wait interval (in seconds, float allowed) between attempts
 #   default: 0.2
-GFARM_HTTP_OIDC_RETRY_INTERVAL=0.2
+GFARM_HTTP_OIDC_RETRY_INTERVAL=0.5
 
 # ========================================
 # Tokens
