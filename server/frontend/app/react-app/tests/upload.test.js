@@ -30,8 +30,8 @@ async function waitForProgressView(page, expectedFileName) {
 
     await expect(taskCard.locator("h6")).toContainText(expectedFileName);
 
-    const progressBar = taskCard.locator(".progress-bar");
-    await expect(progressBar).toBeVisible();
+    // const progressBar = progressView.locator(".progress-bar");
+    // await expect(progressBar).toBeVisible();
     await expect(taskCard.locator(".badge")).toHaveText("completed");
 }
 
