@@ -12,7 +12,7 @@ import { ErrorCodes, get_ui_error } from "@utils/error";
 import { BsArrowBarUp, BsFolder } from "react-icons/bs";
 import PropTypes from "prop-types";
 
-function MoveModal({ hideModalComponent, currentDir, itemsToMove, setItemsToMove, refresh }) {
+function MoveModal({ hideModalComponent, currentDir, itemsToMove, clearItemsToMove, refresh }) {
     const title = "Move";
     const { showHidden } = useShowHidden();
     const [visible, setVisible] = useState(true);
@@ -65,7 +65,7 @@ function MoveModal({ hideModalComponent, currentDir, itemsToMove, setItemsToMove
         hideOverlay();
         setTargetPath("");
         setPendingItems([]);
-        setItemsToMove([]);
+        clearItemsToMove();
         refresh();
     };
 
@@ -144,7 +144,7 @@ function MoveModal({ hideModalComponent, currentDir, itemsToMove, setItemsToMove
         setVisible(false);
         setTargetPath("");
         setPendingItems([]);
-        setItemsToMove([]);
+        clearItemsToMove();
     };
 
     return (
@@ -249,6 +249,6 @@ MoveModal.propTypes = {
     hideModalComponent: PropTypes.func,
     currentDir: PropTypes.string,
     itemsToMove: PropTypes.array,
-    setItemsToMove: PropTypes.func,
+    clearItemsToMove: PropTypes.func,
     refresh: PropTypes.func,
 };

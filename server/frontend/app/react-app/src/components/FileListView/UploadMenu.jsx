@@ -43,6 +43,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
             actions.upload(res.incomingItems);
         }
         e.target.value = null;
+        setSelectedItems([]);
         hideOverlay();
     };
 
@@ -51,6 +52,7 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
             console.debug("incomingItems:", incomingItems);
             actions.upload(incomingItems);
         }
+        setSelectedItems([]);
     };
 
     return (
@@ -144,7 +146,9 @@ function UploadMenu({ actions, uploadDir, currentItems }) {
                     incomingItems={selectedItems}
                     setIncomingItems={setSelectedItems}
                     existingNames={currentItems.map((item) => item.name)}
-                    onCancel={() => {}}
+                    onCancel={() => {
+                        setSelectedItems([]);
+                    }}
                     onConfirm={confirmUpload}
                 />
             )}

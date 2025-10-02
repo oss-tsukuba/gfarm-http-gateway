@@ -327,7 +327,7 @@ function HomePage() {
                 <DeleteModal
                     hideModalComponent={() => setShowDeleteModal(false)}
                     itemsToDelete={itemsToDelete}
-                    setItemsToDelete={setItemsToDelete}
+                    clearItemsToDelete={() => setItemsToDelete([])}
                     refresh={() => {
                         setSelectedItems((prev) =>
                             prev.filter((item) =>
@@ -371,7 +371,7 @@ function HomePage() {
                 <MoveModal
                     hideModalComponent={() => setShowMoveModal(false)}
                     itemsToMove={itemsToMove}
-                    setItemsToMove={setItemsToMove}
+                    clearItemsToMove={() => setItemsToMove([])}
                     currentDir={currentDir}
                     refresh={() => {
                         setSelectedItems((prev) =>

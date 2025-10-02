@@ -137,8 +137,10 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
             }
 
             onUpload(conflictResult.incomingItems);
+            setSelectedItems([]);
             setModalState(MODAL_STATES.NONE);
         } catch (error) {
+            setSelectedItems([]);
             console.error("Error confirming upload:", error);
         } finally {
             hideOverlay();
@@ -150,14 +152,15 @@ function UploadDropZone({ onUpload, uploadDir, currentItems }) {
             if (resolvedItems.length > 0) {
                 onUpload(resolvedItems);
             }
+            setSelectedItems([]);
             setModalState(MODAL_STATES.NONE);
         },
         [onUpload]
     );
 
     const cancelUpload = useCallback(() => {
-        setModalState(MODAL_STATES.NONE);
         setSelectedItems([]);
+        setModalState(MODAL_STATES.NONE);
     }, []);
 
     const fileListContent = useMemo(() => {

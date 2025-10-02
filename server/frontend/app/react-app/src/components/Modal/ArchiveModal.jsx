@@ -115,6 +115,8 @@ function ArchiveModal({
                 options.split(" ").filter(Boolean)
             );
             setIndirList([]);
+            setTargetItems([]);
+            setSelectedFromList([]);
             clearSelectedItems();
             setOptions("");
             setActiveTab("archive");
@@ -141,6 +143,7 @@ function ArchiveModal({
         setTargetDir("");
         setDestDir("");
         setTargetItems([]);
+        setSelectedFromList([]);
         setIndirList([]);
         setOptions("");
         setVisible(false);

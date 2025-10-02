@@ -20,13 +20,13 @@ async function fetch_retry(
 ) {
     try {
         const res = await fetch(api_url, options);
-        if (!includeStatus || n === 1 || !TRANSIENT_STATUS.has(res.status)) {
+        if (!includeStatus || n < 1 || !TRANSIENT_STATUS.has(res.status)) {
             return res;
         }
         throw new Error(res.status);
     } catch (err) {
         console.debug("retry count=", n);
-        if (n === 1) throw err;
+        if (n < 1) throw err;
         const jittered = Math.floor(delay * (0.5 + Math.random())); // 0.5x–1.5x
         await new Promise((r) => setTimeout(r, jittered));
         return await fetch_retry(api_url, options, includeStatus, n - 1, delay);

@@ -19,7 +19,10 @@ function ConflictResolutionModal({
     existingNames,
 }) {
     const [visible, setVisible] = useState(true);
-    const showItems = useMemo(() => getUniqueConflicts(incomingItems), [incomingItems]);
+    const showItems = useMemo(
+        () => (visible ? getUniqueConflicts(incomingItems) : []),
+        [incomingItems, visible]
+    );
     console.debug("showItems", showItems);
 
     useEffect(() => {

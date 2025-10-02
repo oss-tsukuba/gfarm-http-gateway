@@ -5,7 +5,7 @@ import { useOverlay } from "@context/OverlayContext";
 import removeItems from "@utils/remove";
 import PropTypes from "prop-types";
 
-function DeleteModal({ hideModalComponent, itemsToDelete, setItemsToDelete, refresh }) {
+function DeleteModal({ hideModalComponent, itemsToDelete, clearItemsToDelete, refresh }) {
     const title = "Delete";
     const [visible, setVisible] = useState(true);
     const { addNotification } = useNotifications();
@@ -24,7 +24,7 @@ function DeleteModal({ hideModalComponent, itemsToDelete, setItemsToDelete, refr
             const error = await removeItems(itemsToDelete, refresh);
             hideOverlay();
             if (error) addNotification(title, error, "error");
-            setItemsToDelete([]);
+            clearItemsToDelete();
         };
         deleteFile();
         return true;
@@ -36,7 +36,7 @@ function DeleteModal({ hideModalComponent, itemsToDelete, setItemsToDelete, refr
                 testid="delete-modal"
                 show={visible}
                 onCancel={() => {
-                    setItemsToDelete([]);
+                    clearItemsToDelete();
                     setVisible(false);
                 }}
                 onConfirm={handleDelete}
@@ -68,6 +68,6 @@ export default DeleteModal;
 DeleteModal.propTypes = {
     hideModalComponent: PropTypes.func,
     itemsToDelete: PropTypes.array,
-    setItemsToDelete: PropTypes.func,
+    clearItemsToDelete: PropTypes.func,
     refresh: PropTypes.func,
 };
