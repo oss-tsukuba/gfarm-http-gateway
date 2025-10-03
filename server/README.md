@@ -356,9 +356,9 @@ If you want to customize Redis settings, see the note in **[Option 2 > 2. Prepar
 
 **Edit `gfarm-http-gateway-for-HPCI.conf`:**
 
-Edit the following two files:
-  - `gfarm-http-gateway-for-HPCI.conf` (main)
-  - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
+Edit the following two files:  
+`gfarm-http-gateway-for-HPCI.conf` (main)  
+`gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
 
 - **`GFARM_HTTP_SESSION_SECRET`** - set a strong, random secret.
 
