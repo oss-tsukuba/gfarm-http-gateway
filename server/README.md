@@ -56,7 +56,6 @@ Choose one of the following options depending on your environment.
 - **Option 1: Run with Docker** - single container, HTTP only.
 - **Option 2: Run Behind NGINX (HTTPS)** - recommended for production (TLS at NGINX).
 - **Option 3: Run Under a Subpath** - host gfarm-http-gateway at a URL prefix (e.g., `/gfarm`).
-- **Option 4: HPCI Shared Storage** - preconfigured Compose setup for HPCI environments.
 
 > NOTE: If your account is in the `docker` group, run Docker/Compose commands without root; otherwise use `sudo`.  
 > With **rootless Docker**, privileged ports (<1024) can't be bound (e.g., `-p 443:443`); use high ports or a reverse proxy instead.
@@ -65,7 +64,7 @@ Choose one of the following options depending on your environment.
 ### Requirements
 
 - Docker (23.0 or later)
-- Docker Compose (for Option 2, Option 3, Option 4)
+- Docker Compose (for Option 2 and Option 3)
 
 ### Option 1: Run with Docker
 
@@ -109,9 +108,12 @@ docker network create gfarm-net
 
 docker run -d --name gfarm-redis --network gfarm-net \
   -v $(pwd)/redis/redis.conf:/config/redis.conf:ro \
+  -v redis-data:/data \
   redis \
   redis-server /config/redis.conf
 ```
+> NOTE: To create the volume, run `docker volume create redis-data` once.
+> If you bind-mount a host dir instead, ensure it's writable by the Redis user (`chown` to the Redis UID/GID).
 
 #### 4. Run the gfarm-http-gateway container
 
@@ -163,9 +165,9 @@ git clone https://github.com/oss-tsukuba/gfarm-http-gateway.git
 cd gfarm-http-gateway/server
 ```
 
-#### 2. Prepare the Configuration
+#### 2. Prepare Configuration
 
-Follow **[Option 1 > 2. Prepare Configuration](#2-prepare-configuration)** for `config/` and `redis/`.
+Follow **[Option 1 > 2. Prepare Configuration](#2-prepare-configuration)** for `config/`.  
 
 Place the TLS certificate and key files for NGINX (used for HTTPS termination), e.g.:
 ```bash
@@ -197,6 +199,25 @@ Edit `nginx/gfarm.conf`:
   - `ssl_certificate     /etc/nginx/certs/cert.pem;`
   - `ssl_certificate_key /etc/nginx/certs/key.pem;`
 
+> NOTE: This example uses `redis.conf.sample` as a redis configuration file.  
+> If you want to customize Redis settings, copy the sample file and mount the copy:
+> ```
+> cp ./redis.conf.sample ./redis/redis.conf
+> # edit ./redis/redis.conf as you like (e.g., AOF settings)
+> ```
+> Update `docker-compose.yaml` to point at your copy:
+> ```diff
+>  services:
+>  ...
+>    redis:
+>      volumes:
+> -      - ./redis.conf.sample:/config/redis.conf:ro
+> +      - ./redis/redis.conf:/config/redis.conf:ro
+>        - redis-data:/data
+> ```
+>
+> For detailed options and recommended values, consult the official Redis documentation and adjust settings to your requirements.
+
 #### 3. Launch with Docker Compose
 
 ```bash
@@ -218,7 +239,7 @@ This is useful when you share a domain with other apps behind the same reverse p
 
 Follow **[Option 1 > 1. Build the Docker Image and 2. Prepare Configuration](#1-build-the-docker-image)**.
 
-(If you're using Docker Compose, instead follow **[Option 2 > 1. Fetch gfarm-http-gateway and 2. Prepare the Configuration](#1-fetch-gfarm-http-gateway)**.)
+(If you're using Docker Compose, instead follow **[Option 2 > 1. Fetch gfarm-http-gateway and 2. Prepare Configuration](#1-fetch-gfarm-http-gateway)**.)
 
 #### 2. Start gfarm-http-gateway with a root path
 
@@ -263,16 +284,81 @@ docker compose down
 ```
 
 
-### Option 4: Run in HPCI Shared Storage environment
+## HPCI Setup Example: with an alternative system
 
-This option is a preset for HPCI Shared Storage using Docker Compose.  
-**This example (`http://localhost:8080`) is for development/experiments only** and must not be exposed in production.
+This example targets HPCI Shared Storage and uses Docker Compose. It runs two gfarm-http-gateway instances on one hostname (main at `/` and alternative at `/sub/`) each using a different IdP.
+Adjust IPs/hostnames to your production environment.
 
-For secure deployments, see **Production settings** below and place gfarm-http-gateway behind an HTTPS-enabled reverse proxy.
+This example uses the following files:
 
-#### Production settings
+- **`docker-compose-for-HPCI-with-sub.yaml`**
+- **`nginx-for-HPCI-with-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`templates/login-idp-switch.html`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`gfarm-http-gateway-for-HPCI-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+- **`redis.conf.sample`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
+
+### Prepare Configuration
+
+Create a working copy and edit as needed:
+
+```bash
+cp nginx-for-HPCI-with-sub.conf.sample ./nginx/nginx-for-HPCI-with-sub.conf
+cp gfarm-http-gateway-for-HPCI.conf.sample ./config/gfarm-http-gateway-for-HPCI.conf
+cp gfarm-http-gateway-for-HPCI-sub.conf.sample ./config/gfarm-http-gateway-for-HPCI-sub.conf
+cp templates/login-idp-switch.html.sample ./templates/login-idp-switch.html
+```
+
+Run the following script to download HPCI-specific `gfarm2.conf` and CA certificate:
+```bash
+./download-HPCI-config.sh
+```
+
+Place the TLS certificate and key files for NGINX (used for HTTPS termination), e.g.:
+```bash
+nginx/certs/
+├── cert.pem   # your server certificate
+└── key.pem    # your private key
+```
+
+If you use an existing reverse proxy, remove the bundled `nginx-proxy` service from `docker-compose-for-HPCI-with-sub.yaml` and configure your proxy using `nginx/nginx-for-HPCI-with-sub.conf.sample` as a reference.
+
+If you want to customize Redis settings, see the note in **[Option 2 > 2. Prepare Configuration](#2-prepare-configuration-1)**.
+
+#### Production settings (required)
+
+**`docker-compose-for-HPCI-with-sub.yaml`:**
+
+- gfarm-http-gateway:
+  - `command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
+- gfarm-http-gateway-sub:
+  - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
+
+> NOTE: `<REVERSE_PROXY_IP>`  
+> IP address(es) of every proxy that adds `X-Forwarded-*` to the request.
+> - Single tier: specify that one IP
+> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`
+> If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
+
+**`nginx/nginx-for-HPCI-with-sub.conf`:**
+
+- `server_name`: your public FQDN
+
+> NOTE: For detailed options and recommended values, consult the official NGINX documentation and adjust settings to your requirements.
+
+**`templates/login-idp-switch.html`:**
+
+- Set the login buttons to your real URLs:  
+  - Main: `location.href='https://<YOUR_HOST>/login_oidc'`  
+  - Alternative: `location.href='https://<YOUR_HOST>/sub/login_oidc'`
+
+**`config/gfarm-http-gateway-for-HPCI*.conf`:**
 
 **Edit `gfarm-http-gateway-for-HPCI.conf`:**
+
+Edit the following two files:
+  - `gfarm-http-gateway-for-HPCI.conf` (main)
+  - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
 
 - **`GFARM_HTTP_SESSION_SECRET`** - set a strong, random secret.
 
@@ -292,126 +378,38 @@ For secure deployments, see **Production settings** below and place gfarm-http-g
   GFARM_HTTP_OIDC_OVERRIDE_REDIRECT_URI=
   ```
 
-**TLS & reverse proxy**
-
-- Install a valid TLS certificate for your production hostname and terminate TLS at the reverse proxy.
-- Run gfarm-http-gateway behind the reverse proxy; proxy → gfarm-http-gateway communication uses HTTP on an internal network.
-
-#### 1. Fetch gfarm-http-gateway
-
-Follow **[Option 2 > 1. Fetch gfarm-http-gateway](#1-fetch-gfarm-http-gateway)**.
-
-#### 2. Fetch HPCI Shared Storage config and certificate
-
-Run the following script to download HPCI-specific `gfarm2.conf` and CA certificate:
-```bash
-./download-HPCI-config.sh
-```
-
-#### 3. Prepare configuration
-
-Create working copies and edit as needed:
-
-```bash
-cp gfarm-http-gateway-for-HPCI.conf.sample ./config/gfarm-http-gateway-for-HPCI.conf
-cp redis.conf.sample ./redis/redis.conf
-```
-
-#### 4. Launch with Docker Compose
-
-Use the example Compose file: [`docker-compose-for-HPCI.yaml`](./docker-compose-for-HPCI.yaml)
-
-```bash
-docker compose -f docker-compose-for-HPCI.yaml up -d --build
-```
-
-This setup:
-
-- Mounts `gfarm-http-gateway-for-HPCI.conf` as the gateway configuration
-- Listens on port 8080 (access at `http://localhost:8080`)
-
-#### 5. Stop the container
-
-```bash
-docker compose -f docker-compose-for-HPCI.yaml down
-```
-
-
-## HPCI Setup Example: with an alternative system
-
-This setup runs two gfarm-http-gateway instances on a single hostname with **different IdPs**, split by paths (main /, alternative /sub/).  
-Start Docker with the samples below and adjust IPs/hostnames to your production environment.
-
-This setup uses the following files:
-
-- **`docker-compose-for-HPCI-with-sub.yaml`**
-- **`nginx-for-HPCI-with-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- **`templates/login-idp-switch.html`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- **`gfarm-http-gateway-for-HPCI.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-- **`gfarm-http-gateway-for-HPCI-sub.conf`** - referenced by `docker-compose-for-HPCI-with-sub.yaml`
-
-### Prepare Configuration
-
-Create a working copy and edit as needed:
-
-```bash
-cp nginx-for-HPCI-with-sub.conf.sample ./nginx/nginx-for-HPCI-with-sub.conf
-cp gfarm-http-gateway-for-HPCI.conf.sample ./config/gfarm-http-gateway-for-HPCI.conf
-cp gfarm-http-gateway-for-HPCI-sub.conf.sample ./config/gfarm-http-gateway-for-HPCI-sub.conf
-cp templates/login-idp-switch.html.sample ./templates/login-idp-switch.html
-```
-
-#### Production settings (required)
-
-**`nginx/nginx-for-HPCI-with-sub.conf`:**
-
-- `server_name`: your public FQDN
-- `ssl_certificate` / `ssl_certificate_key`: paths mounted at `/etc/nginx/certs` (e.g., `cert.pem`, `key.pem`)
-
-**`docker-compose-for-HPCI-with-sub.yaml`:**
-
-- gfarm-http-gateway:
-  - `command: --host 0.0.0.0 --port 8080 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
-- gfarm-http-gateway-sub:
-  - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
-
-> NOTE: `<REVERSE_PROXY_IP>`  
-> IP address(es) of every proxy that adds `X-Forwarded-*` to the request.
-> - Single tier: specify that one IP
-> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`
-> If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
-
-**`templates/login-idp-switch.html`:**
-
-- Set the login buttons to your real URLs:  
-  - Main: `location.href='https://<YOUR_HOST>/login_oidc'`  
-  - Alternative: `location.href='https://<YOUR_HOST>/sub/login_oidc'`
-
-**`config/gfarm-http-gateway-for-HPCI*.conf`:**
-
-- Set production values as in [Option 4](#option-4-run-in-hpci-shared-storage-environment) in the following two files:
-  - `gfarm-http-gateway-for-HPCI.conf` (main)
-  - `gfarm-http-gateway-for-HPCI-sub.conf` (alternative)
 
 ### Start gfarm-http-gateway with an alternative system
 
-See [Option 4](#option-4-run-in-hpci-shared-storage-environment) and run Docker Compose with `docker-compose-for-HPCI-with-sub.yaml`.
+#### 1. Launch with Docker Compose
+
+```bash
+docker compose -f docker-compose-for-HPCI-with-sub.yaml up -d --build
+```
+
+#### 2. Stop the containers
+
+```bash
+docker compose -f docker-compose-for-HPCI-with-sub.yaml down
+```
+
 
 ### For development (HTTP)
 
-This variant is for local development and experiments. It runs two gfarm-http-gateway instances on a single host (main `/main`, alternative `/sub`) and uses HTTP. **Do not expose this setup to the Internet.**
+This variant is for local development and experiments. It runs two gfarm-http-gateway instances on a single host (main at `/main/`, alternative at `/sub/`) and uses HTTP. **Do not expose this setup to the Internet.**
 
-This setup uses the following files:
+This example uses the following files:
 
 - **`docker-compose-for-HPCI-dev-with-sub.yaml`**
 - **`nginx-for-HPCI-dev-with-sub.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
 - **`templates/login-idp-switch-dev.html`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
 - **`gfarm-http-gateway-for-HPCI-dev.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
 - **`gfarm-http-gateway-for-HPCI-dev-sub.conf`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
+- **`redis.conf.sample`** - referenced by `docker-compose-for-HPCI-dev-with-sub.yaml`
 
 #### Start gfarm-http-gateway with an alternative system
 
-See [Option 4](#option-4-run-in-hpci-shared-storage-environment) and run Docker Compose with `docker-compose-for-HPCI-dev-with-sub.yaml`.
+See [Start gfarm-http-gateway with an alternative system](#start-gfarm-http-gateway-with-an-alternative-system) and run Docker Compose with `docker-compose-for-HPCI-dev-with-sub.yaml`.
 
 - **After login:** In this example you **always** access the gateway via a subpath. The IdP redirects to `http://localhost:8080/` with the access token. You must append the required subpath **after** `http://localhost:8080/` (e.g., `http://localhost:8080/main/...`, `http://localhost:8080/sub/...`) so that the subpath instance of gfarm-http-gateway picks up the token. If you land on `/` and see a 404, just add the subpath; you don’t need to sign in again.
 
@@ -483,7 +481,7 @@ services:
         # GFARM_SRC_GIT_BRANCH: "2.8"
         
         # build from a local source tree (leave GFARM_SRC_URL and GFARM_SRC_GIT_URL empty)
-        # GFARM_SRC_LOCAL: ./vender/gfarm
+        # GFARM_SRC_LOCAL: ./vendor/gfarm
         # GFARM_SRC_URL: ""
         # GFARM_SRC_GIT_URL: ""
 ```
@@ -525,9 +523,9 @@ docker compose up -d
   - Prepare the Gfarm environment **on the same host where gfarm-http-gateway runs**.
   - Ensure `gf*` commands and a valid `gfarm2.conf` are available.
   - Create and use a dedicated user for gfarm-http-gateway (e.g., `gfhg`), and configure that user's Gfarm configuration file (e.g., `/home/gfhg/.gfarm2rc`).
-    - set enable to `sasl` with `auth enable sasl`
-    - set disable to all other methods with `auth disable <all other methods>`
-    - Do not set `sasl_mechanisms` or `sasl_user`
+    - set enable to `sasl` with `auth enable sasl`.
+    - set disable to all other methods with `auth disable <all other methods>`.
+    - Do not set `sasl_mechanisms` or `sasl_user`.
 
 - **gfarm-http-gateway requirements**
   - To install Python and Node.js packages and build the Web UI, run:
@@ -713,7 +711,7 @@ You can run gfarm-http-gateway as a **systemd service** for automatic startup an
 gfarm-http-gateway reads `file_icons.json` to decide which icon to display for each file type.
 
 - **How to set this file**:  
-  - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`
+  - **Docker**: mount your `file_icons.json` into the container at `/config/file_icons.json`.
   - **Manual installation**: edit or replace `frontend/app/react-app/dist/assets/file_icons.json` after `npm --prefix frontend/app/react-app run build`.
 
 - **Default file in the source tree**:
@@ -886,8 +884,7 @@ You can build and test gfarm-http-gateway inside the **gfarm/docker/dist** devel
 
    ```bash
    # start
-   cp redis.conf.sample ./redis/redis.conf
-   redis-server ./redis/redis.conf --daemonize yes
+   redis-server ./redis-for-docker-dist.conf
  
    # check
    redis-cli -h 127.0.0.1 -p 6379 ping  # → PONG
