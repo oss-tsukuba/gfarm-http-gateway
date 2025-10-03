@@ -2,14 +2,13 @@
 port 6379
 tls-port 0
 
-# Optional: run in background so you can skip the CLI flag
-# daemonize yes
-
-# Optional persistence (uncomment if needed)
-# dir /tmp/redis-data
-# appendonly yes
-save ""
-appendonly no
+# Persistence
+appendonly yes
+dir /data
+appendfilename gfarm.aof
+appendfsync always
+auto-aof-rewrite-min-size 32mb
+auto-aof-rewrite-percentage 100
 
 # Optional password (only if your gateway supports Redis auth)
 # requirepass change-me

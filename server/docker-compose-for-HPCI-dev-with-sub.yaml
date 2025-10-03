@@ -53,10 +53,14 @@ services:
     command: ["redis-server", "/config/redis.conf"]
     volumes:
       # Required: Redis configuration
-      - ./redis/redis.conf:/config/redis.conf:ro
+      - ./redis.conf.sample:/config/redis.conf:ro
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "PING"]
       interval: 10s
       timeout: 3s
       retries: 20
     restart: unless-stopped
+
+volumes:
+  redis-data:
