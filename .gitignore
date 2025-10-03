@@ -19,3 +19,6 @@ server/nginx/*
 !server/nginx/.gitkeep
 server/redis/*
 !server/redis/.gitkeep
+
+server/vender/*
+!server/vender/gfarm/.gitkeep

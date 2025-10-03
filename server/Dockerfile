@@ -9,6 +9,7 @@ ARG GFARM_VER=2.8.8
 ARG GFARM_SRC_URL=
 ARG GFARM_SRC_GIT_URL=https://github.com/oss-tsukuba/gfarm.git
 ARG GFARM_SRC_GIT_BRANCH=2.8
+ARG GFARM_SRC_LOCAL=vendor/gfarm
 
 ARG SCITOKENS_CPP_SRC_GIT_URL=https://github.com/scitokens/scitokens-cpp.git
 ARG SCITOKENS_CPP_SRC_GIT_BRANCH=master
@@ -29,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     python3 python3-docopt python3-schema
 
 # ==== Build scitokens-cpp ====
-RUN cd /tmp \
+RUN set -eux && cd /tmp \
     && git clone -b ${SCITOKENS_CPP_SRC_GIT_BRANCH} --depth 1 ${SCITOKENS_CPP_SRC_GIT_URL} scitokens-cpp \
     && cd scitokens-cpp \
     && mkdir build && cd build \
@@ -37,7 +38,7 @@ RUN cd /tmp \
     && make && make install
 
 # ==== Build cyrus-sasl-xoauth2-idp ====
-RUN cd /tmp \
+RUN set -eux && cd /tmp \
     && git clone -b ${SASL_XOAUTH2_SRC_GIT_BRANCH} --depth 1 ${SASL_XOAUTH2_SRC_GIT_URL} cyrus-sasl-xoauth2-idp \
     && cd cyrus-sasl-xoauth2-idp \
     && ./autogen.sh \
@@ -45,16 +46,25 @@ RUN cd /tmp \
     && make && make install
 
 # ==== Build Gfarm ====
-RUN cd /tmp \
+RUN --mount=type=bind,source=${GFARM_SRC_LOCAL},target=/tmp/gfarm-local,readonly \
+    set -eux && cd /tmp \
     && if [ -n "${GFARM_SRC_URL}" ]; then \
-    wget -O gfarm.tar.gz ${GFARM_SRC_URL} \
-    && tar xf gfarm.tar.gz \
-    ; else \
-    git clone -b ${GFARM_SRC_GIT_BRANCH} --depth 1 ${GFARM_SRC_GIT_URL} gfarm-${GFARM_VER} \
-    ; fi \
-    && cd gfarm-${GFARM_VER} \
+    echo ">> Using : ${GFARM_SRC_URL}"; \
+    wget -O gfarm.tar.gz "${GFARM_SRC_URL}"; \
+    mkdir "gfarm-${GFARM_VER}"; \
+    tar xf gfarm.tar.gz --strip-components=1 -C "gfarm-${GFARM_VER}"; \
+    elif [ -n "${GFARM_SRC_GIT_URL}" ] && [ -n "${GFARM_SRC_GIT_BRANCH}" ]; then \
+    echo ">> Using : ${GFARM_SRC_GIT_URL} (branch ${GFARM_SRC_GIT_BRANCH})"; \
+    git clone -b "${GFARM_SRC_GIT_BRANCH}" --depth 1 "${GFARM_SRC_GIT_URL}" "gfarm-${GFARM_VER}"; \
+    else \
+    echo ">> Using : ${GFARM_SRC_LOCAL}"; \
+    mkdir "gfarm-${GFARM_VER}"; \
+    cp -a /tmp/gfarm-local/. "gfarm-${GFARM_VER}/"; \
+    fi \
+    && cd "gfarm-${GFARM_VER}" \
     && ./configure --enable-xmlattr --enable-cyrus-sasl \
-    && make && make install
+    && make -j"$(nproc)" \
+    && make install
 
 # ==== Collect SASL plugin and libscitokens ====
 RUN LIBDIR=$(pkg-config --variable=libdir libsasl2) \
@@ -69,7 +79,7 @@ FROM debian:bookworm-slim AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ==== Set ARGs for runtime ====
-ARG NODE_VERSION=22.18.0
+ARG NODE_VERSION=22.20.0
 
 # ==== Install runtime dependencies ====
 RUN apt-get update && apt-get install -y --no-install-recommends \

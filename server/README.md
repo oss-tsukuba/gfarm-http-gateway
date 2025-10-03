@@ -64,7 +64,7 @@ Choose one of the following options depending on your environment.
 
 ### Requirements
 
-- Docker
+- Docker (23.0 or later)
 - Docker Compose (for Option 2, Option 3, Option 4)
 
 ### Option 1: Run with Docker
@@ -125,7 +125,7 @@ docker run --rm --network gfarm-net \
 By default, **gfarm-http-gateway** listens on port 8000 inside the container.  
 To change ports:
 ```bash
-docker run --rm \
+docker run --rm --network gfarm-net \
   -v $(pwd)/config:/config \
   -p 127.0.0.1:8080:8080 \
   gfarm-http-gateway --host 0.0.0.0 --port 8080
@@ -443,8 +443,7 @@ docker compose build
 ```bash
 docker build \
   --build-arg GFARM_VER=2.8.8 \
-  -t gfarm-http-gateway:gfarm-2.8.8 \
-  .
+  -t gfarm-http-gateway:gfarm-2.8.8 .
 ```
 
 #### Build from Git repository
@@ -454,8 +453,17 @@ docker build \
   --build-arg GFARM_SRC_URL='' \
   --build-arg GFARM_SRC_GIT_URL='https://github.com/oss-tsukuba/gfarm.git' \
   --build-arg GFARM_SRC_GIT_BRANCH='2.8' \
-  -t gfarm-http-gateway:gfarm-2.8-src \
-  .
+  -t gfarm-http-gateway:gfarm-2.8-src .
+```
+
+#### Build from a local source tree
+
+```bash
+docker build \
+  --build-arg GFARM_SRC_LOCAL='./vendor/gfarm' \
+  --build-arg GFARM_SRC_URL='' \
+  --build-arg GFARM_SRC_GIT_URL='' \
+  -t gfarm-http-gateway:gfarm-local .
 ```
 
 #### Using Docker Compose
@@ -469,10 +477,15 @@ services:
         # use a released version
         GFARM_VER: "2.8.8"
 
-        # build from source (leave GFARM_SRC_URL empty)
+        # build from Git repository (leave GFARM_SRC_URL empty)
         # GFARM_SRC_URL: ""
         # GFARM_SRC_GIT_URL: "https://github.com/oss-tsukuba/gfarm.git"
         # GFARM_SRC_GIT_BRANCH: "2.8"
+        
+        # build from a local source tree (leave GFARM_SRC_URL and GFARM_SRC_GIT_URL empty)
+        # GFARM_SRC_LOCAL: ./vender/gfarm
+        # GFARM_SRC_URL: ""
+        # GFARM_SRC_GIT_URL: ""
 ```
 
 ### Restart the container
