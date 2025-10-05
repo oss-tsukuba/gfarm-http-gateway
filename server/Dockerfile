@@ -9,7 +9,7 @@ ARG GFARM_VER=2.8.8
 ARG GFARM_SRC_URL=
 ARG GFARM_SRC_GIT_URL=https://github.com/oss-tsukuba/gfarm.git
 ARG GFARM_SRC_GIT_BRANCH=2.8
-ARG GFARM_SRC_LOCAL=vendor/gfarm
+ARG GFARM_SRC_LOCAL=vendor
 
 ARG SCITOKENS_CPP_SRC_GIT_URL=https://github.com/scitokens/scitokens-cpp.git
 ARG SCITOKENS_CPP_SRC_GIT_BRANCH=master
