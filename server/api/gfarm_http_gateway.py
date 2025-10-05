@@ -391,7 +391,7 @@ except Exception:
 try:
     HTTP_RETRY_INTERVAL = float(conf.GFARM_HTTP_OIDC_RETRY_INTERVAL)
 except Exception:
-    HTTP_RETRY_INTERVAL = 0.2
+    HTTP_RETRY_INTERVAL = 0.5
 
 GFARM_PREFIX = "gfarm"
 
@@ -3030,6 +3030,7 @@ async def zip_export(request: Request,
     filedatas = []
     for filepath in paths:
         try:
+            env = await set_env(request, authorization)
             info = await get_file_info(env, filepath)
         except Exception as err:
             raise_gfarm_http_error(opname, err)
