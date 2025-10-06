@@ -623,7 +623,8 @@ async def lifespan(app: FastAPI):
                                       ssl_keyfile=REDIS_SSL_KEYFILE,
                                       ssl_ca_certs=REDIS_SSL_CA_CERTS,
                                       username=REDIS_USERNAME,
-                                      password=REDIS_PASSWORD)
+                                      password=REDIS_PASSWORD,
+                                      logger=logger)
         await app.state.redis.connect()
     yield
     # Clean
@@ -2171,41 +2172,45 @@ async def gfls_generator(
     dirname = os.path.dirname(path) if is_file else path
     p = await gfls(env, path,
                    show_hidden, recursive, long_format, time_format, effperm)
-    stdout = ""
-    buffer = b""
-    is_reading = True
-    while is_reading:
-        chunk = await p.stdout.read(1)
-        if not chunk:
-            is_reading = False
-            if len(buffer) > 0:
-                buffer += b"\n"
-        else:
-            buffer += chunk
-        if b"\r" in buffer or b"\n" in buffer:
-            # print(f"buffer:{buffer}")
-            line = buffer.decode("utf-8", errors="replace").strip()
-            stdout += line
-            buffer = b""
-            if not line:
-                continue
-            entry = Gfls_Entry.parse(line=line,
-                                     is_file=is_file,
-                                     long_format=long_format,
-                                     full_format_time=time_format == 'full',
-                                     effperm=effperm)
-            if isinstance(entry, Gfls_Entry):
-                entry.set_dirname(dirname)
-                yield entry
-                continue
-            if recursive:
-                dirname = os.path.normpath(line[:-1])
-            else:
-                yield line
 
+    elist = []
+    stderr_task = asyncio.create_task(log_stderr("gfls", p, elist))
+    seen_lines = []
+
+    async for raw in p.stdout:  # Get each line separated by a newline (\n)
+        line = raw.decode("utf-8", errors="replace").rstrip("\n")
+        if not line:
+            continue
+        seen_lines.append(line)
+
+        entry = None
+        try:
+            entry = Gfls_Entry.parse(
+                line=line,
+                is_file=is_file,
+                long_format=long_format,
+                full_format_time=(time_format == 'full'),
+                effperm=effperm,
+            )
+        except Exception as e:
+            logger.error(f"gfls_generator: {str(e)}")
+            logger.debug(line)
+        if isinstance(entry, Gfls_Entry):
+            entry.set_dirname(dirname)
+            yield entry
+            continue
+
+        if recursive:
+            dirname = os.path.normpath(line[:-1])
+        else:
+            yield line
+
+    await stderr_task
     return_code = await p.wait()
+
     if not ign_err and return_code != 0:
-        raise RuntimeError(stdout)
+        msg = "\n".join(elist) if len(elist) > 0 else "\n".join(seen_lines)
+        raise RuntimeError(msg)
 
 
 async def gfmkdir(env, path, p=False):
@@ -3135,6 +3140,7 @@ async def zip_export(request: Request,
             try:
                 for filepath, is_file in filedatas:
                     parent = os.path.dirname(filepath)
+                    env = await set_env(request, authorization)
                     async for entry in gfls_generator(env, filepath, is_file):
                         if entry.name in (".", ".."):
                             continue
@@ -3785,12 +3791,19 @@ async def archive_files(
     stderr_task = asyncio.create_task(log_stderr(opname, p, elist))
 
     first_byte = await p.stdout.read(1)
-    if not first_byte:
+    if not first_byte and cmd != "t":
         await stderr_task
         code = status.HTTP_500_INTERNAL_SERVER_ERROR
         error = elist[-1] if len(elist) > 0 else ""
         message = f"Failed to execute: gfptar {' '.join(args)} : {error}"
         stdout = ""
+        try:
+            if tokenfilepath:
+                os.remove(tokenfilepath)
+        except Exception as e:
+            logger.error(
+                f"{ipaddr}:0 user={user}, cmd={opname},"
+                f"os.remove({tokenfilepath}) error: {e}")
         raise gfarm_http_error(opname, code, message, stdout, elist)
 
     async def progress_generator():
@@ -3838,7 +3851,7 @@ async def archive_files(
             except Exception as e:
                 logger.error(
                     f"{ipaddr}:0 user={user}, cmd={opname},"
-                    + f"os.remove({tokenfilepath}) error: {e}")
+                    f"os.remove({tokenfilepath}) error: {e}")
 
     return StreamingResponse(content=progress_generator(),
                              media_type='application/x-ndjson')
