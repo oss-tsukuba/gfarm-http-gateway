@@ -24,7 +24,8 @@ class RedisClient:
                  ssl_ca_certs: Optional[str] = None,
                  username: Optional[str] = None,
                  password: Optional[str] = None,
-                 lock_prefix: str = "LOCK"):
+                 lock_prefix: str = "LOCK",
+                 logger=None):
         self._host = host
         self._port = port
         self._db = db
@@ -37,6 +38,7 @@ class RedisClient:
         self._password = password
         self._client: Optional[Redis] = None
         self.lock_prefix = lock_prefix
+        self.logger = logger
 
     async def connect(self) -> Redis:
         if self._client is None:
@@ -52,6 +54,9 @@ class RedisClient:
                 password=self._password,
                 decode_responses=self._decode
             )
+            if self.logger:
+                self.logger.debug("RedisClient connect",
+                                  self._host, self._port, self._db)
         return self._client
 
     @property
@@ -73,6 +78,8 @@ class RedisClient:
         return await self.client.set(key, value)
 
     async def setex(self, key: str, ttl: int, value: bytes | str) -> bool:
+        if self.logger:
+            self.logger.debug("setex", key)
         return await self.client.setex(key, ttl, value)
 
     async def delete(self, key: str) -> int:
@@ -84,23 +91,35 @@ class RedisClient:
     async def acquire_lock(self, key: str, ttl: int = 10,
                            retry_count: int = 3,
                            retry_interval: float = 0.05):
+        if self.logger:
+            self.logger.debug("RedisClient acquire_lock", key)
         lock_key = f"{self.lock_prefix}{key}"
         val = uuid.uuid4().hex
         count = 0
         sleep = min(retry_interval, 0.2)
         while True:
             ok = await self.client.set(lock_key, val, nx=True, ex=max(1, ttl))
+            if self.logger:
+                self.logger.debug("RedisClient acquire_lock", key)
             if ok:
                 return True, val
+            if self.logger:
+                self.logger.debug(f"RedisClient acquire_lock"
+                                  f" attempt{count} failed", key)
             if count >= retry_count:
+                self.logger.warning("RedisClient acquire_lock failed", key)
                 return False, ""
             await asyncio.sleep(sleep)
             count += 1
 
     async def release_lock(self, key: str, val: str) -> bool:
+        if self.logger:
+            self.logger.debug("RedisClient release_lock", key)
         lock_key = f"{self.lock_prefix}{key}"
         try:
             res = await self.client.eval(_RELEASE_LUA, 1, lock_key, val)
             return res == 1
         except Exception:
+            if self.logger:
+                self.logger.warning("RedisClient release_lock failed", key)
             return False
