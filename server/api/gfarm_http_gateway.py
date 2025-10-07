@@ -2951,11 +2951,16 @@ async def file_export(gfarm_path: str,
     cl = str(info.size)
     headers = {"content-length": cl}
     if action == 'download':
-        filename = os.path.basename(gfarm_path)
+        filename = os.path.basename(gfarm_path).strip()
+        ascii_fallback = filename.encode("ascii", "ignore").decode()
         encoded = urllib.parse.quote(filename, encoding='utf-8')
         # RFC 5987,8187
-        cd = f"attachment; filename*=UTF-8' '\"{encoded}\""
+        # cd = f"attachment; filename*=UTF-8' '\"{encoded}\""
         # cd = f"attachment; filename=\"{encoded}\""
+        cd = (
+            f'attachment; filename="{ascii_fallback}"; '
+            f"filename*=UTF-8''{encoded}"
+        )
         headers.update({"content-disposition": cd})
     return StreamingResponse(content=generate(),
                              media_type=ct,
