@@ -626,10 +626,15 @@ async def lifespan(app: FastAPI):
                                       password=REDIS_PASSWORD,
                                       logger=logger)
         await app.state.redis.connect()
-    yield
-    # Clean
-    if hasattr(app.state, "redis"):
-        await app.state.redis.close()
+    app.state.zip_executor = ThreadPoolExecutor()
+    try:
+        yield
+    finally:
+        # Clean
+        if hasattr(app.state, "redis"):
+            await app.state.redis.close()
+        if hasattr(app.state, "zip_executor"):
+            app.state.zip_executor.shutdown(wait=True, cancel_futures=True)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -2977,7 +2982,6 @@ class ZipStreamWriter:
     def write(self, data: bytes) -> int:
         if self._closed:
             raise ValueError("I/O operation on closed file.")
-
         self._current_chunk.extend(data)
         appended = False
         with self._lock:
@@ -2991,13 +2995,15 @@ class ZipStreamWriter:
                 self._current_chunk.clear()
                 appended = True
         if appended:
-            self._loop.create_task(self._notify())
+            self._notify()
 
         return len(data)
 
-    async def _notify(self):
-        async with self._condition:
-            self._condition.notify_all()
+    def _notify(self):
+        async def notify():
+            async with self._condition:
+                self._condition.notify_all()
+        asyncio.run_coroutine_threadsafe(notify(), self._loop)
 
     async def get_chunks(self) -> AsyncGenerator[bytes, None]:
         while not self._closed or self._buffer:
@@ -3016,7 +3022,7 @@ class ZipStreamWriter:
 
     def close(self):
         self._closed = True
-        self._loop.create_task(self._notify())
+        self._notify()
 
     def flush(self):
         pass
@@ -3069,16 +3075,12 @@ async def zip_export(request: Request,
             stderr_task = None
             dest = None
             try:
-                if await request.is_disconnected():
-                    raise asyncio.CancelledError
-                env = await set_env(request, authorization)
-                proc, _ = await gfexport(env, entry.path)
+                env_e = await set_env(request, authorization)
+                proc, _ = await gfexport(env_e, entry.path)
                 elist = []
                 stderr_task = asyncio.create_task(
                     log_stderr(opname, proc, elist))
 
-                def open_zip_entry():
-                    return zipf.open(zipinfo, 'w')
                 dest = await loop.run_in_executor(
                     executor, lambda: zipf.open(zipinfo, 'w'))
                 if dest:
@@ -3097,11 +3099,6 @@ async def zip_export(request: Request,
                 return_code = await proc.wait()
                 if return_code != 0:
                     raise classify_gfarm_error(elist)
-            except asyncio.CancelledError:
-                logger.info(
-                    f"{ipaddr}:0 user={user}, cmd={opname}, "
-                    f"path={entry.path}, zip entry cancelled")
-                raise
             except Exception as e:
                 message = f"zip create error: path={entry.path}: {str(e)}"
                 logger.error(
@@ -3127,21 +3124,39 @@ async def zip_export(request: Request,
                     with contextlib.suppress(ProcessLookupError,
                                              ChildProcessError):
                         await proc.wait()
+                logger.debug("zip_export: add_entry_to_zip close")
 
     async def create_zip(zip_writer):
-        executor = ThreadPoolExecutor(max_workers=1)
-        loop = asyncio.get_event_loop()
-        try:
-            zf = await loop.run_in_executor(
-                executor,
-                lambda: zipfile.ZipFile(zip_writer, "w",
-                                        compression=zipfile.ZIP_DEFLATED)
-            )
+        # ZipFile is NOT thread-safe; restrict writes to a single thread
+        executor = getattr(request.app.state,
+                           "zip_executor",
+                           ThreadPoolExecutor(max_workers=1))
+        loop = asyncio.get_running_loop()
+
+        # Pipeline: gfls -> (Queue) -> add_entry_to_zip
+        QUEUE_SIZE = 0  # no limit
+        gfls_queue: asyncio.Queue[Gfls_Entry | None] = asyncio.Queue(
+            maxsize=QUEUE_SIZE)
+        QUEUE_BACKPRESSURE_THRESHOLD = 50_000
+        QUEUE_THROTTLE_DELAY = 0.05
+
+        stop_evt = asyncio.Event()
+
+        async def producer():
+            """
+            Traverse filedatas and push entries produced
+            by gfls_generator to the queue.
+            """
             try:
                 for filepath, is_file in filedatas:
                     parent = os.path.dirname(filepath)
-                    env = await set_env(request, authorization)
-                    async for entry in gfls_generator(env, filepath, is_file):
+                    env_p = await set_env(request, authorization)
+                    async for entry in gfls_generator(
+                            env_p, filepath, is_file):
+                        if await request.is_disconnected():
+                            stop_evt.set()
+                        if stop_evt.is_set():
+                            raise asyncio.CancelledError
                         if entry.name in (".", ".."):
                             continue
                         dirname = entry.dirname
@@ -3150,14 +3165,62 @@ async def zip_export(request: Request,
                         if dirname.startswith("/"):
                             dirname = dirname[1:]
                         entry.dirname = os.path.normpath(dirname)
-                        await add_entry_to_zip(zf, entry, loop, executor)
+                        if gfls_queue.qsize() > QUEUE_BACKPRESSURE_THRESHOLD:
+                            await asyncio.sleep(QUEUE_THROTTLE_DELAY)
+                        await gfls_queue.put(entry)
+                        logger.debug(f"add {entry.name} to "
+                                     f"gfls_queue {gfls_queue.qsize()}")
+            except Exception:
+                stop_evt.set()
+                logger.exception("zip build failed")
             finally:
-                # Close (writes central directory) -> thread
-                await loop.run_in_executor(executor, zf.close)
-        except Exception as e:
-            logger.exception(f"zip build failed: {str(e)}")
+                # Signal completion to consumer
+                await gfls_queue.put(None)
+                logger.debug("zip_export: producer close")
+
+        async def consumer():
+            """
+            Pop entries from the queue and write them into the Zip.
+            """
+            zf = await loop.run_in_executor(
+                executor,
+                lambda: zipfile.ZipFile(zip_writer, "w",
+                                        compression=zipfile.ZIP_DEFLATED)
+            )
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        stop_evt.set()
+                    if stop_evt.is_set():
+                        raise asyncio.CancelledError
+                    item = await gfls_queue.get()
+                    if item is None:
+                        gfls_queue.task_done()
+                        break
+                    try:
+                        await add_entry_to_zip(zf, item, loop, executor)
+                    finally:
+                        gfls_queue.task_done()
+            except Exception:
+                stop_evt.set()
+                logger.exception("zip build failed")
+            finally:
+                with contextlib.suppress(Exception):
+                    await loop.run_in_executor(executor, zf.close)
+                with contextlib.suppress(Exception):
+                    zip_writer.close()
+                logger.debug("zip_export: comsumer close")
+
+        try:
+            # Run producer and consumer concurrently
+            prod_task = asyncio.create_task(producer())
+            cons_task = asyncio.create_task(consumer())
+            await asyncio.wait({prod_task, cons_task})
+        except Exception:
+            stop_evt.set()
+            logger.debug("zip_export: create_zip close1")
         finally:
-            zip_writer.close()
+            logger.debug("zip_export: create_zip close")
 
     async def generate():
         zip_writer = ZipStreamWriter(loop=asyncio.get_running_loop(),
@@ -3165,22 +3228,20 @@ async def zip_export(request: Request,
         task = asyncio.create_task(create_zip(zip_writer))
         try:
             async for chunk in zip_writer.get_chunks():
-                if await request.is_disconnected():
-                    logger.info(
-                        f"{ipaddr}:0 user={user}, cmd={opname}, "
-                        "zip export cancelled: client disconnected")
-                    raise asyncio.CancelledError
                 logger.debug("zip: generate(): yield")
                 yield chunk
-        except Exception as e:
-            task.cancel()
+        except asyncio.CancelledError:
+            logger.info(
+                f"{ipaddr}:0 user={user}, cmd={opname}, "
+                "zip export cancelled: client disconnected")
+        except Exception:
+            logger.exception(
+                f"{ipaddr}:0 user={user}, cmd={opname},"
+                " zip export failed")
+        finally:
             with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.shield(task)
-            if isinstance(e, asyncio.CancelledError):
-                logger.info(
-                    f"{ipaddr}:0 user={user}, cmd={opname},"
-                    " zip export cancelled")
-            raise
+                await task
+            logger.debug("zip_export done")
 
     date_str = datetime.now().strftime('%Y%m%d-%H%M%S')
     target_dir = filedatas[0][0].rstrip("/")
@@ -3497,6 +3558,7 @@ async def get_attr(gfarm_path: str,
                 log_operation(env, request.method, apiname, opname, gfarm_path)
                 logger.debug(
                     f"{ipaddr}:0 user={user}, cmd={opname}, path={gfarm_path}")
+                env = await set_env(request, authorization)  # may refresh
                 lastentry = await get_lsinfo(env, gfarm_path, 0)
                 result_json["LinkPath"] = lastentry.path
             except FileNotFoundError as err:
