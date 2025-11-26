@@ -188,11 +188,19 @@ cp nginx.conf.sample ./nginx/gfarm.conf
 ```
 
 Edit `docker-compose.yaml`:
+- Set `--forwarded-allow-ips` to the gfarm-http-gateway container command, e.g.:
+  - `command: --host 0.0.0.0 --port 8000 --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
 - Mount Redis files to Redis container, e.g.:
   - `./redis/redis.conf:/config/redis.conf:ro`
 - Mount NGINX files to NGINX container, e.g.:
   - `./nginx/gfarm.conf:/etc/nginx/conf.d/gfarm.conf:ro`
   - `./nginx/certs:/etc/nginx/certs:ro`
+
+> NOTE: `<REVERSE_PROXY_IP>`  
+> IP address(es) of all proxies that adds `X-Forwarded-*` headers to the request.
+> - Single tier: specify that one IP
+> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`
+> If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
 
 Edit `nginx/gfarm.conf`:
 - Point TLS to your NGINX certificates, e.g.:
@@ -335,10 +343,8 @@ If you want to customize Redis settings, see the note in **[Option 2 > 2. Prepar
   - `command: --host 0.0.0.0 --port 8080 --root-path /sub --forwarded-allow-ips '<REVERSE_PROXY_IP>'`
 
 > NOTE: `<REVERSE_PROXY_IP>`  
-> IP address(es) of every proxy that adds `X-Forwarded-*` to the request.
-> - Single tier: specify that one IP
-> - Multiple tiers: list them comma-separated, e.g., `10.0.0.5,172.22.0.10`
-> If gfarm-http-gateway is never reachable directly (e.g., docker network only), you may use `'*'` (ensure gfarm-http-gateway port is not exposed).
+> Add all IP addresses of your reverse proxies, or use '*' (allow all).
+> For details, see: [Quick Start > Option 2 > 2. Prepare Configuration](#2-prepare-configuration-1)
 
 **`nginx/nginx-for-HPCI-with-sub.conf`:**
 
@@ -662,6 +668,17 @@ This section shows an **example configuration** for NGINX.
    ```bash
    sudo systemctl restart nginx
    ```
+
+4. Restart gfarm-http-gateway
+
+   - Restart gfarm-http-gateway with the `--forwarded-allow-ips` option:
+     ```
+     ./bin/gfarm-http-gateway.sh --host 0.0.0.0 --forwarded-allow-ips '<REVERSE_PROXY_IP>'
+     ```
+
+    > NOTE: `<REVERSE_PROXY_IP>`  
+    > Add all IP addresses of your reverse proxies, or use '*' (allow all).
+    > For details, see: [Quick Start > Option 2 > 2. Prepare Configuration](#2-prepare-configuration-1)
 
 ### Systemd
 
