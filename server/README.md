@@ -329,7 +329,7 @@ nginx/certs/
 └── key.pem    # your private key
 ```
 
-If you use an existing reverse proxy, remove the bundled `nginx-proxy` service from `docker-compose-for-HPCI-with-sub.yaml` and configure your proxy using `nginx/nginx-for-HPCI-with-sub.conf.sample` as a reference.
+If you use an existing reverse proxy, remove the bundled `nginx-proxy` service from `docker-compose-for-HPCI-with-sub.yaml` and configure your proxy using `nginx-for-HPCI-with-sub.conf.sample` as a reference.
 
 If you want to customize Redis settings, see the note in **[Option 2 > 2. Prepare Configuration](#2-prepare-configuration-1)**.
 
