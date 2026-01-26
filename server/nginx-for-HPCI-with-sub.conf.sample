@@ -29,6 +29,7 @@ server {
     proxy_read_timeout    60s;
     proxy_send_timeout    60s;
     proxy_buffering off;          # streamy responses
+    proxy_request_buffering off;  # streamy uploading
     client_max_body_size 0;       # allow large uploads
 
     proxy_pass http://gfarm-http-gateway:8080/;
@@ -52,6 +53,7 @@ server {
     proxy_read_timeout    60s;
     proxy_send_timeout    60s;
     proxy_buffering off;          # streamy responses
+    proxy_request_buffering off;  # streamy uploading
     client_max_body_size 0;       # allow large uploads
 
     proxy_pass http://gfarm-http-gateway-sub:8080/;
