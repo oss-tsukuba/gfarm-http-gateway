@@ -661,6 +661,8 @@ This section shows an **example configuration** for NGINX.
 
    - Create `/etc/nginx/conf.d/gfarm.conf`
    - Use the provided sample [`nginx.conf.sample`](./nginx.conf.sample) as a reference.
+     - Modify the `proxy_set_header X-Forwarded-For` line based on your environment.
+     - Also, update other settings according to your environment.
    - If serving under a path prefix, see **[Option 3: Run Under a Subpath](#option-3-run-under-a-subpath)** for configuration.
 
 3. Restart NGINX
