@@ -1,7 +1,7 @@
 # ========= Build Stage =========
 FROM debian:bookworm-slim AS builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 # ==== Set ARGs for build-time config ====
 ARG GFARM_VER=2.8.8
@@ -76,7 +76,7 @@ RUN LIBDIR=$(pkg-config --variable=libdir libsasl2) \
 # ========= Runtime Stage =========
 FROM debian:bookworm-slim AS runtime
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 # ==== Set ARGs for runtime ====
 ARG NODE_VERSION=22.20.0
